@@ -1,0 +1,2889 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="ModuleScript" referent="RBXF84457B8F5AC4727B16224086794F2EE">
+		<Properties>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">BasicCommands</string>
+			<string name="ScriptGuid">{CFE46403-DD93-443C-8B7F-7C414F45FB15}</string>
+			<ProtectedString name="Source"><![CDATA[--[[
+	 __        __  _______  __    __  __   __  ________
+    /  \      / / / _____/  \ \  / /  \ \  \ \ \  _____\
+   / /\ \    / / / /____     \ \/ /    \ \  \ \ \ \_____
+  / /  \ \  / / / _____/     / /\ \     \ \  \ \ \_____ \
+ / /    \ \/ / / /____      / /  \ \     \ \__\ \  ____\ \
+/_/      \__/ /______/     /_/    \_\     \______\ \______\
+
+Nexus Admin, by TheNexusAvenger
+
+
+
+Date: June 7 2018
+--]]
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------              Configuration             --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+CommandOverrideLevels = {
+	vote = nil,
+	pchat = nil,
+	track = nil,
+	untrack = nil,
+	chatlogs = nil,
+	batch = nil,
+	loop = nil,
+	m = nil,
+	h = nil,
+	pm = nil,
+	ph = nil,
+	sm = nil,
+	sh = nil,
+	clear = nil,
+	mute = nil,
+	unmute = nil,
+	crash = nil,
+	shutdown = nil,
+	countdown = nil,
+	age = nil,
+	refresh = nil,
+	clean = nil,
+	punish = nil,
+	respawn = nil,
+	team = nil,
+	tools = nil,
+	give = nil,
+	startergive = nil,
+	startertool = nil,
+	sword = nil,
+	atksword = nil,
+	removetools = nil,
+	resetstats = nil,
+	change = nil,
+	gear = nil,
+}
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------             Optimizations              --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local gsub,sub,match,len,lower = string.gsub,string.sub,string.match,string.len,string.lower
+local huge,random,pi = math.huge,math.random,math.pi
+local insert = table.insert
+local CFramenew,CFrameAngles = CFrame.new,CFrame.Angles
+local Vector3new = Vector3.new
+local Instancenew = Instance.new
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------         Environment Variables          --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local API = _G.NexusAdmin_GetServerAPI()
+local AdminItemContainer = API.AdminItemContainer
+local Config = API.GetConfig()
+
+local CommandPrefix = Config.CommandPrefix or ":"
+local BuildUtilityLevel = Config.BuildUtilityLevel or 1
+local BasicCommandsLevel = Config.BasicCommandsLevel or 1
+local UsefulFunCommandsLevel = Config.UsefulFunCommandsLevel or 2
+local FunCommandsLevel = Config.FunCommandsLevel or 3
+local PersistentCommandsLevel = Config.PersistentCommandsLevel or 4
+local CommandLevelOverrides = Config.CommandLevelOverrides or {}
+
+local function GetNeededAdminLevel(BaseValue,CommandValue)
+	local Level = (CommandLevelOverrides["BasicCommands"] or {})[CommandValue]
+	return CommandOverrideLevels[CommandValue] or Level or BaseValue
+end
+
+local SingleUseLocalScript = script:WaitForChild("SingleUseLocalScript")
+local function GiveSingleUseLocalScript(Player,Function)
+	local Script = SingleUseLocalScript:Clone()
+	Script.Parent = Player:WaitForChild("PlayerGui")
+	Script:WaitForChild("FunctionToDo").Value = Function
+	Script.Disabled = false
+end
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------            Basic Commands              --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local RemoteObjectFolder = Instancenew("Folder")
+RemoteObjectFolder.Name = "IncludedCommandsRemoteEvents"
+RemoteObjectFolder.Parent = API.EventContainer
+
+local VoteResponseEvent
+local Polls = {}
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "vote",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"vote"),
+	ExtraInfo = "Creates a poll for a set of players and returns the results.",
+	ArgumentsHelp = "Players Time Question",
+	CommandGroup = "Basic Commands",
+	OnCommandLoad = function()
+		VoteResponseEvent = Instancenew("RemoteEvent")
+		VoteResponseEvent.Name = "VoteResponseEvent"
+		VoteResponseEvent.Parent = RemoteObjectFolder
+		
+		VoteResponseEvent.OnServerEvent:Connect(function(Player,Id,IsYes)
+			if not Polls[Id] then return end
+			if IsYes == true then
+				Polls[Id].Yes = Polls[Id].Yes + 1
+			else
+				Polls[Id].No = Polls[Id].No + 1
+			end
+		end)
+	end,
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Time = ArgumentParser:GetNextNumber()
+		local Question = ArgumentParser:GetRemainder(true)
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Time then API.DisplayHint(Player,"No Time given.") return end
+		if not Question then API.DisplayHint(Player,"No Question given.") return end
+		local Id = #Polls + 1
+		Polls[Id] = {Yes=0,No=0}
+		for _,NewPlayer in pairs(Players) do
+			GiveSingleUseLocalScript(NewPlayer,"StartVote_"..Id.."_"..Time.."_"..Question)
+		end
+		wait(Time)
+		GiveSingleUseLocalScript(Player,"ShowResults_"..Polls[Id].Yes.."_"..Polls[Id].No.."_"..Question)
+	end,
+})
+
+local PrivateChatEvent
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = {"pc","pchat"},
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"pchat"),
+	ExtraInfo = "Starts a private chat between a set of players.",
+	ArgumentsHelp = "Players Message",
+	CommandGroup = "Basic Commands",
+	OnCommandLoad = function()
+		PrivateChatEvent = Instancenew("RemoteEvent")
+		PrivateChatEvent.Name = "PrivateChatEvent"
+		PrivateChatEvent.Parent = RemoteObjectFolder
+		
+		PrivateChatEvent.OnServerEvent:Connect(function(PlayerFrom,PlayerTo,Message)
+			if PlayerTo then
+				Message = API.FilterStringAsync(Message,PlayerFrom,PlayerTo)
+				GiveSingleUseLocalScript(PlayerTo,"PrivateChat_"..PlayerFrom.UserId.."_"..Message)
+			end
+		end)
+	end,
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Message = ArgumentParser:GetRemainder(true)
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Message then API.DisplayHint(Player,"No Message given.") return end
+		for _,NewPlayer in pairs(Players) do
+			GiveSingleUseLocalScript(NewPlayer,"PrivateChat_"..Player.UserId.."_"..Message)
+		end
+	end,
+})
+
+local TrackScript = script:WaitForChild("NexusAdmin_TrackScript_")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "track",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"track"),
+	ExtraInfo = "Starts a private chat between a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,NewPlayer in pairs(Players) do
+			local NewScript = TrackScript:Clone()
+			NewScript.Name = "NexusAdmin_TrackScript_"..NewPlayer.Name
+			NewScript.Parent = Player.Character
+			NewScript.Disabled = false
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "untrack",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"untrack"),
+	ExtraInfo = "Starts a private chat between a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,NewPlayer in pairs(Players) do
+			local Script = Player.Character:FindFirstChild("NexusAdmin_TrackScript_"..NewPlayer.Name)
+			if Script then
+				local Event = Script:FindFirstChild("SafeRemove")
+				if Event then
+					Event:FireClient(Player)
+				end
+			end
+		end
+	end,
+})
+
+local GetChatLogsFunction
+local ChatLogsPermission = GetNeededAdminLevel(BasicCommandsLevel,"chatlogs")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "chatlogs",
+	AdminLevel = ChatLogsPermission,
+	ExtraInfo = "Creates a list of all the chat logs (last 500 messages).",
+	CommandGroup = "Basic Commands",
+	OnCommandLoad = function()
+		GetChatLogsFunction = Instancenew("RemoteFunction")
+		GetChatLogsFunction.Name = "GetChatLogsFunction"
+		GetChatLogsFunction.Parent = RemoteObjectFolder
+		
+		local ChatLogs = {}
+		GetChatLogsFunction.OnServerInvoke = function(Player)
+			if API.GetAdminLevel(Player) >= ChatLogsPermission then
+				return ChatLogs
+			end
+		end
+		
+		local function PlayerAdded(Player)
+			Player.Chatted:Connect(function(Message)
+				insert(ChatLogs,1,Player.Name.." ["..API.GetTimeString().."]: "..API.FilterStringAsync(Message,Player))
+				ChatLogs[501] = nil
+			end)
+		end
+		
+		game.Players.PlayerAdded:Connect(PlayerAdded)
+		for _,Player in pairs(game.Players:GetPlayers()) do
+			PlayerAdded(Player)
+		end
+	end,
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		GiveSingleUseLocalScript(Player,"ChatLogs")
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "batch",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"batch"),
+	ExtraInfo = "Preforms several commands at once.",
+	ArgumentsHelp = "Command/Commands/Command...",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Commands = ArgumentParser:GetRemainder()
+		
+		if not Commands then API.DisplayHint(Player,"No Commands given.") return end
+		local CommandsToRun = {}
+		gsub(Commands,"([^%/]+)",function(NewCommand)
+			table.insert(CommandsToRun,NewCommand)
+		end)
+		
+		for _,NewCommand in pairs(CommandsToRun) do
+			local Start = match(NewCommand,"([^%s]+)")
+			local End = sub(NewCommand,len(Start) + 2)
+			API.InvokeCommand(Start,End,Player)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "loop",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"loop"),
+	ExtraInfo = "Loops a command for a certain amount of time with a certain interval.",
+	ArgumentsHelp = "Times IntervalsSeconds Command",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Intervals = ArgumentParser:GetNextNumber()
+		local Time = ArgumentParser:GetNextNumber()
+		local Command = ArgumentParser:GetRemainder()
+		
+		if not Intervals then API.DisplayHint(Player,"No Intervals given.") return end
+		if not Time then API.DisplayHint(Player,"No inteval time given.") return end
+		if not Command then API.DisplayHint(Player,"No Command given.") return end
+		local Start = match(Command,"([^%s]+)")
+		local End = sub(Command,len(Start) + 2)
+		for _ = 1, Intervals do
+			API.InvokeCommand(Start,End,Player)
+			if Time > 0 then wait(Time) end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "m",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"m"),
+	ExtraInfo = "Creates a message visible to everyone.",
+	ArgumentsHelp = "Message",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Message = ArgumentParser:GetRemainder(true)
+		
+		if not Message then API.DisplayHint(Player,"No Message given.") return end
+		for _,ShowPlayer in pairs(game.Players:GetPlayers()) do
+			API.DisplayMessage(ShowPlayer,Player.Name,Message)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "h",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"h"),
+	ExtraInfo = "Creates a hint visible to everyone.",
+	ArgumentsHelp = "Message",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Message = ArgumentParser:GetRemainder(true)
+		
+		if not Message then API.DisplayHint(Player,"No Message given.") return end
+		for _,ShowPlayer in pairs(game.Players:GetPlayers()) do
+			API.DisplayHint(ShowPlayer,Player.Name..": "..Message)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "pm",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"pm"),
+	ExtraInfo = "Creates a message visible to only the players specified.",
+	ArgumentsHelp = "Players Message",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Message = ArgumentParser:GetRemainder(true)
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Message then API.DisplayHint(Player,"No Message given.") return end
+		for _,ShowPlayer in pairs(Players) do
+			API.DisplayMessage(ShowPlayer,Player.Name.." (Privately)",Message)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "ph",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"ph"),
+	ExtraInfo = "Creates a hint visible to only the players specified.",
+	ArgumentsHelp = "Players Message",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Message = ArgumentParser:GetRemainder(true)
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Message then API.DisplayHint(Player,"No Message given.") return end
+		for _,ShowPlayer in pairs(Players) do
+			API.DisplayHint(ShowPlayer,Player.Name.." (Privately): "..Message)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "sm",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"sm"),
+	ExtraInfo = "Creates a message visible to everyone, name shows as Nexus Admin.",
+	ArgumentsHelp = "Message",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Message = ArgumentParser:GetRemainder(true)
+		
+		if not Message then API.DisplayHint(Player,"No Message given.") return end
+		for _,ShowPlayer in pairs(game.Players:GetPlayers()) do
+			API.DisplayMessage(ShowPlayer,"Nexus Admin",Message)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "sh",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"sh"),
+	ExtraInfo = "Creates a hint visible to everyone, no name is shwon.",
+	ArgumentsHelp = "Message",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Message = ArgumentParser:GetRemainder(true)
+		
+		if not Message then API.DisplayHint(Player,"No Message given.") return end
+		for _,ShowPlayer in pairs(game.Players:GetPlayers()) do
+			API.DisplayHint(ShowPlayer,Message)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "clear",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"clear"),
+	ExtraInfo = "Clears items that admins have created.",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		AdminItemContainer:ClearAllChildren()
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "mute",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"mute"),
+	ExtraInfo = "Mutes the set of players given. Any form of admin can't be muted.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			if API.GetAdminLevel(Player) < 0 then
+				GiveSingleUseLocalScript(Player,"HideChat")
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unmute",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"unmute"),
+	ExtraInfo = "Unmutes the set of players given. Any form of admin can't be muted.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			if API.GetAdminLevel(Player) < 0 then
+				GiveSingleUseLocalScript(Player,"ShowChat")
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "crash",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"crash"),
+	ExtraInfo = "Crashes the set of players given. Any form of admin can't be muted.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			if API.GetAdminLevel(Player) < 0 then
+				GiveSingleUseLocalScript(Player,"Crash")
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "shutdown",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"shutdown"),
+	ExtraInfo = "Shuts down the server, kinda. Just kicks everyone. If you have a better solution, use it.",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		for _,Player in pairs(game.Players:GetPlayers()) do
+			API.DisplayMessage(Player,"Nexus Admin","Server is shutting down.")
+		end
+		wait(1)
+		for _,Player in pairs(game.Players:GetPlayers()) do
+			Player:Kick("Server has shut down")
+		end
+		game.Players.PlayerAdded:Connect(function(Player)
+			Player:Kick()
+		end)
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "countdown",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"countdown"),
+	ExtraInfo = "Creates a countdown with the given seconds.",
+	ArgumentsHelp = "Time",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Time = ArgumentParser:GetNextNumber()
+		
+		if not Time then API.DisplayHint(Player,"No Time given.") return end
+		Time = math.floor(Time)
+		for _,Player in pairs(game.Players:GetPlayers()) do
+			GiveSingleUseLocalScript(Player,"Countdown_"..Time)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "age",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"age"),
+	ExtraInfo = "Displays the age of a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,NewPlayer in pairs(Players) do
+			API.DisplayHint(Player,NewPlayer.Name.." ("..NewPlayer.UserId..") has the age of "..NewPlayer.AccountAge.." days.")
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "refresh",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"refresh"),
+	ExtraInfo = "Respawns a player and moves them back to where they originally were.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			spawn(function()
+				local HumanoidRootPart = Player.Character:FindFirstChild("HumanoidRootPart")
+				if not HumanoidRootPart then return end
+				local CF = HumanoidRootPart.CFrame
+				Player:LoadCharacter()
+				local Character = Player.Character
+				while not Character do wait() Character = Player.Character end
+				Character:WaitForChild("HumanoidRootPart").CFrame = CF
+			end)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = "!",
+	Keyword = "clean",
+	AdminLevel = GetNeededAdminLevel(-1,"refresh"),
+	ExtraInfo = "Clears all the dropped hats and tools in Workspace.",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		for _,Ins in pairs(game.Workspace:GetChildren()) do
+			if Ins:IsA("Accoutrement") or Ins:IsA("Accessory") or Ins:IsA("Hat") or Ins:IsA("Tool") then
+				Ins:Destroy()
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "punish",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"punish"),
+	ExtraInfo = "Punishes a set of players by removing their character.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			spawn(function()
+				local Character = Player.Character
+				if not Character then return end
+				Character:Destroy()
+			end)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "respawn",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"respawn"),
+	ExtraInfo = "Respawns a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			Player:LoadCharacter()
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "team",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"team"),
+	ExtraInfo = "Changes a set of player's team to the given team.",
+	ArgumentsHelp = "Players TeamName",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local TeamName = ArgumentParser:GetRemainder()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not TeamName then API.DisplayHint(Player,"No Team Name given.") return end
+		local TeamColor
+		for _,Team in pairs(game:GetService("Teams"):GetTeams()) do
+			if sub(lower(Team.Name),1,len(TeamName)) == lower(TeamName) then
+				TeamColor = Team.TeamColor
+				break
+			end
+		end
+		
+		if TeamColor then
+			for _,Player in pairs(Players) do
+				Player.TeamColor = TeamColor
+			end
+		else
+			API.DisplayHint(Player,"No team with the given name found.")
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "tools",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"tools"),
+	ExtraInfo = "Gives a list of all the tools in ServerStorage and Lighting.",
+	CommandGroup = "Basic Commands",
+	OnCommandLoad = function()
+		local RemoteFunction = Instancenew("RemoteFunction")
+		RemoteFunction.Name = "GetServerStorageTools"
+		RemoteFunction.Parent = RemoteObjectFolder
+		
+		RemoteFunction.OnServerInvoke = function()
+			local Tools = {}
+			for _,Ins in pairs(game.ServerStorage:GetChildren()) do
+				if Ins:IsA("Tool") or Ins:IsA("HopperBin") then
+					insert(Tools,Ins.Name)
+				end
+			end
+			return Tools
+		end
+	end,
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		GiveSingleUseLocalScript(Player,"ToolsList")
+	end,
+})
+
+local function ListOfToolsToTable(String,UseLighting,UseServerStorage,UseStarterPack)
+	String = lower(String)
+	local Tools = {}
+	local function DoService(Service)
+		for _,Tool in pairs(Service:GetChildren()) do
+			if Tool:IsA("Tool") or Tool:IsA("HopperBin") then	
+				gsub(String,"([^%,]+)",function(ToolName)
+					if ToolName == "all" then
+						insert(Tools,Tool)
+					elseif sub(lower(Tool.Name),1,len(String)) == lower(String) then
+						insert(Tools,Tool)
+					end
+				end)
+			end
+		end
+	end	
+	if UseLighting == true then
+		DoService(game.Lighting)
+	end
+	if UseServerStorage == true then
+		DoService(game.ServerStorage)
+	end
+	if UseStarterPack == true then
+		DoService(game.StarterPack)
+	end
+	
+	return Tools
+end
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "give",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"give"),
+	ExtraInfo = "Gives a set of players tools matching the tool name(s) from Lighting or ServerStorage.",
+	ArgumentsHelp = "Players ToolString",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local ToolString = ArgumentParser:GetRemainder()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not ToolString then API.DisplayHint(Player,"No Tool(s) given.") return end
+		local Tools = ListOfToolsToTable(ToolString,true,true,false)
+		for _,Player in pairs(Players) do
+			spawn(function()
+				local Backpack = Player:WaitForChild("Backpack")
+				for _,Tool in pairs(Tools) do
+					Tool:Clone().Parent = Backpack
+				end
+			end)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "startergive",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"startergive"),
+	ExtraInfo = "Gives a set of players tools matching the tool name(s) from Lighting or ServerStorage, and they start with the tools on spawn.",
+	ArgumentsHelp = "Players ToolString",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local ToolString = ArgumentParser:GetRemainder()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not ToolString then API.DisplayHint(Player,"No Tool(s) given.") return end
+		local Tools = ListOfToolsToTable(ToolString,true,true,false)
+		for _,Player in pairs(Players) do
+			spawn(function()
+				local Backpack = Player:WaitForChild("Backpack")
+				local StarterGear = Player:WaitForChild("StarterGear")
+				for _,Tool in pairs(Tools) do
+					Tool:Clone().Parent = Backpack
+					Tool:Clone().Parent = StarterGear
+				end
+			end)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "startertool",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"startertool"),
+	ExtraInfo = "Gives a set of players tools matching the tool name(s) from StarterPack",
+	ArgumentsHelp = "Players ToolString",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local ToolString = ArgumentParser:GetRemainder()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not ToolString then API.DisplayHint(Player,"No Tool(s) given.") return end
+		local Tools = ListOfToolsToTable(ToolString,false,false,true)
+		for _,Player in pairs(Players) do
+			spawn(function()
+				local Backpack = Player:WaitForChild("Backpack")
+				for _,Tool in pairs(Tools) do
+					Tool:Clone().Parent = Backpack
+				end
+			end)
+		end
+	end,
+})
+
+local Sword = script:WaitForChild("Sword")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "sword",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"sword"),
+	ExtraInfo = "Gives a sword to the given players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			Sword:Clone().Parent = Player:WaitForChild("Backpack")
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "atksword",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"atksword"),
+	ExtraInfo = "Gives an anti-teamkill sword to the given players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			local Sword = Sword:Clone()
+			Sword:WaitForChild("Configurations"):WaitForChild("CanTeamkill").Value = false
+			Sword.Parent = Player:WaitForChild("Backpack")
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "removetools",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"removetools"),
+	ExtraInfo = "Removes all tools from the players given.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			spawn(function()
+				if not Player.Character then return end
+				Player.Character:WaitForChild("Humanoid"):UnequipTools()
+				for _,Tool in pairs(Player:WaitForChild("Backpack"):GetChildren()) do
+					if Tool:IsA("Tool") or Tool:IsA("HopperBin") then
+						Tool:Destroy()
+					end
+				end
+			end)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "resetstats",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"resetstats"),
+	ExtraInfo = "Resets all number leaderstats of a player.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			local leaderstats = Player:FindFirstChild("leaderstats")
+			if leaderstats then
+				for _,Stat in pairs(leaderstats:GetChildren()) do
+					if Stat:IsA("ValueBase") and type(Stat.Value) == "number" then
+						Stat.Value = 0
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "change",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"change"),
+	ExtraInfo = "Changes the stat of a set of players. Note: Only changes string and number values.",
+	ArgumentsHelp = "Players StatName Value",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local StatName = ArgumentParser:GetNextString()
+		local NewValue = ArgumentParser:GetNexNumber()
+		if NewValue == nil then
+			ArgumentParser:OffsetPointer(-1)
+			NewValue = ArgumentParser:GetNextString(true)
+		end
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not StatName then API.DisplayHint(Player,"No stat name given.") return end
+		if not NewValue then API.DisplayHint(Player,"No value given.") return end
+		StatName = lower(StatName)
+		
+		for _,NewPlayer in pairs(Players) do
+			local leaderstats = NewPlayer:FindFirstChild("leaderstats")
+			if leaderstats then
+				for _,Stat in pairs(leaderstats:GetChildren()) do
+					if sub(lower(Stat.Name),1,len(StatName)) == StatName then
+						if type(NewValue) == "string" and type(Stat.Value) == "string" then
+							Stat.Value = NewValue
+						elseif type(NewValue) == "number" and type(Stat.Value) == "number" then
+							Stat.Value = NewValue
+						else
+							API.DisplayHint(Player,"Unable to assign value to stat.")
+						end
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "gear",
+	AdminLevel = GetNeededAdminLevel(BasicCommandsLevel,"gear"),
+	ArgumentsHelp = "Players Ids",
+	ExtraInfo = "Gives the gear with the given ids to each player.",
+	CommandGroup = "Basic Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Ids = ArgumentParser:GetNextNumbers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		if #Ids == 0 then API.DisplayHint(Player,"No Id(s) given") return end
+		local Tools = {}
+		for _,Id in pairs(Ids) do
+			local Model = game:GetService("InsertService"):LoadAsset(Id)
+			for _,Tool in pairs(Model:GetChildren()) do
+				if Tool:IsA("Tool") then
+					insert(Tools,Tool)
+				end
+			end
+		end
+		for _,Player in pairs(Players) do
+			local Backpack = Player:WaitForChild("Backpack")
+			for _,Tool in pairs(Tools) do
+				Tool:Clone().Parent = Backpack
+			end
+		end
+	end,
+})
+
+
+
+return true]]></ProtectedString>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+		<Item class="LocalScript" referent="RBX68F74F22983745F584DF650383398609">
+			<Properties>
+				<bool name="Disabled">true</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">NexusAdmin_TrackScript_</string>
+				<string name="ScriptGuid">{43972BA9-9AFB-49B2-9C67-DBE52DDB75FE}</string>
+				<ProtectedString name="Source"><![CDATA[local Player = game.Players:FindFirstChild(string.sub(script.Name,24))
+if not Player then script:Destroy() return end
+local MyCharacter = game.Players.LocalPlayer.Character
+local RenderStepped = game:GetService("RunService").RenderStepped
+local Character = Player.Character
+if not Character or not MyCharacter then script:Destroy() return end
+local MyHumanoidRootPart = MyCharacter:FindFirstChild("HumanoidRootPart")
+local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+local Head = Character:FindFirstChild("Head")
+local Humanoid = Character:FindFirstChild("Humanoid")
+local MyHumanoid = MyCharacter:FindFirstChild("Humanoid")
+if not Head or not HumanoidRootPart or not MyHumanoidRootPart or not MyHumanoid or not Humanoid then script:Destroy() return end
+
+local CurrentLine = game.Workspace.CurrentCamera:FindFirstChild("NexusAdmin_Line_"..Player.Name)
+if CurrentLine then CurrentLine:Destroy() end
+--[[local Line = Instance.new("Part")
+Line.FormFactor = "Custom"
+Line.BrickColor = BrickColor.new("Bright blue")
+Line.CanCollide = false
+Line.Anchored = true
+Line.TopSurface = "Smooth"
+Line.BottomSurface = "Smooth"
+Line.Shape = "Cylinder"
+Line.Material = "SmoothPlastic"
+Line.Name = "NexusAdmin_Line_"..Player.Name
+Line.Parent = game.Workspace.CurrentCamera]]
+
+local BillboardGui = Instance.new("BillboardGui")
+BillboardGui.AlwaysOnTop = true
+BillboardGui.Size = UDim2.new(20,0,20,0)
+BillboardGui.Adornee = Head
+BillboardGui.Parent = game.Workspace.CurrentCamera
+
+local Text = Instance.new("TextLabel")
+Text.BackgroundTransparency = 1
+Text.Size = UDim2.new(1,0,0.5,0)
+Text.FontSize = "Size24"
+--Text.TextScaled = true
+Text.TextColor3 = Color3.new(1,1,1)
+Text.TextStrokeColor3 = Color3.new(0,0,0)
+Text.TextStrokeTransparency = 0
+Text.Text = Character.Name.."\nv"
+Text.Parent = BillboardGui
+
+local function UpdateColor()
+	if Player.Neutral == true then
+		Text.TextColor3 = Color3.new(1,1,1)
+	else
+		Text.TextColor3 = Player.TeamColor.Color
+	end
+end
+Player.Changed:Connect(UpdateColor)
+UpdateColor()
+
+local function ForceClose()
+	--Line:Destroy()
+	Text:Destroy()
+	script:Destroy()
+end
+
+Humanoid.Died:Connect(function()
+	ForceClose()
+end)
+
+MyHumanoid.Died:Connect(function()
+	ForceClose()
+end)
+
+game.Players.PlayerRemoving:Connect(function(PlayerDisconnecting)
+	if PlayerDisconnecting == Player then
+		ForceClose()
+	end
+end)
+
+script:WaitForChild("SafeRemove").OnClientEvent:Connect(function()
+	ForceClose()
+end)
+
+--[[local Vector3new,CFramenew = Vector3.new,CFrame.new
+local RotationAngle = CFrame.Angles(0,math.pi/2,0)
+local function Draw()
+	local Point1,Point2 = MyTorso.Position,Torso.Position
+	local Mag = (Point2 - Point1).magnitude
+	Line.Size = Vector3new(Mag,0.2,0.2)
+	Line.CFrame = CFramenew(Point1,Point2) * CFramenew(0,0,-Mag/2) * RotationAngle
+end
+
+while Line.Parent do
+	Draw()
+	RenderStepped:Wait()
+end]]]]></ProtectedString>
+				<BinaryString name="Tags"></BinaryString>
+			</Properties>
+			<Item class="RemoteEvent" referent="RBX85B4446270114E9ABE2A8B8F04FB629E">
+				<Properties>
+					<string name="Name">SafeRemove</string>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="LocalScript" referent="RBXF33398CBADD047348E2E8655A6A0FEC5">
+			<Properties>
+				<bool name="Disabled">true</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">SingleUseLocalScript</string>
+				<string name="ScriptGuid">{2AF426DD-0DBE-40B5-93FC-0223C436163A}</string>
+				<ProtectedString name="Source"><![CDATA[local FunctionToDo = script:WaitForChild("FunctionToDo")
+while FunctionToDo.Value == "" do wait() end 
+local FunctionToDoValue = FunctionToDo.Value
+
+local API = _G.NexusAdmin_GetLocalAPI()
+local RemoteEvents = API.EventContainer:WaitForChild("IncludedCommandsRemoteEvents")
+
+local LineHeightRelative = 0.06
+local PrivateMessageRelativeSize = 0.3
+
+
+
+local function Create6pxNineSlice()
+	local Frame = Instance.new("ImageLabel")
+	Frame.BackgroundTransparency = 1
+	Frame.Image = "rbxassetid://475155538"
+	Frame.ScaleType = "Slice"
+	Frame.SliceCenter = Rect.new(6,6,44,44)
+	
+	return Frame
+end
+
+local ButtonClass = require(script:WaitForChild("ButtonClass"))
+local function CreateButton(ColorName)
+	local Button = ButtonClass.new()
+	Button.BorderSizeScale = 0.05
+	if ColorName == "Blue" then
+		Button.BackgroundColor3 = Color3.new(0,170/255,255/255)
+		Button.BorderColor3 = Color3.new(0,140/255,225/255)
+	elseif ColorName == "Red" then
+		Button.BackgroundColor3 = Color3.new(170/255,0,0)
+		Button.BorderColor3 = Color3.new(140/255,0,0)
+	elseif ColorName == "Green" then
+		Button.BackgroundColor3 = Color3.new(0,170/255,0)
+		Button.BorderColor3 = Color3.new(0,140/255,0)
+	end
+	Button.TextScaled = true
+	Button.TextStrokeTransparency = 0
+	Button.Font = "SourceSansBold"
+	Button.TextColor3 = Color3.new(1,1,1)
+	Button.TextStrokeColor3 = Color3.new(0,0,0)
+	Button.TextPadding = UDim.new(0.05,0)
+	return Button
+end
+
+local function CreateSearchableMenu(TopName,GetInfoFunction,CloseFunction)
+	local Search = ""
+	local Scroll
+	local LineAdorn,MainLineAdorn,SearchBar,SearchButton
+	
+	local Instancenew = Instance.new
+	local UDim2new,Color3new = UDim2.new,Color3.new
+	local WhiteColor3 = Color3.new(1,1,1)
+	local find,lower = string.find,string.lower
+	
+	local Lines = {}
+	local function RefreshList()
+		local CurrentPos = 2
+		
+		for _,Frame in pairs(Lines) do
+			Frame:Destroy()
+		end
+		
+		local MaxAspectRatio = 1
+		local BaseAspectRatio = (Scroll.AbsoluteSize.X/(Scroll.AbsoluteSize.Y * LineHeightRelative))
+		local function CreateLine(Text)
+			local TextAspectRatio = (API.GetTextBounds(Text,"SourceSans",50,false,UDim2.new(1,0,1,0),false).X/50)/BaseAspectRatio
+			if MaxAspectRatio < TextAspectRatio then
+				MaxAspectRatio = TextAspectRatio
+			end
+			
+			local TextLabel = Instancenew("TextLabel")
+			TextLabel.BackgroundTransparency = 1
+			TextLabel.Position = UDim2.new(0,0,CurrentPos,0)
+			TextLabel.Size = UDim2new(1,0,1,0)
+			TextLabel.Font = "SourceSans"
+			TextLabel.TextScaled = true
+			TextLabel.TextColor3 = WhiteColor3
+			TextLabel.TextXAlignment = "Left"
+			TextLabel.TextWrapped = true
+			TextLabel.Text = Text
+			TextLabel.Parent = LineAdorn
+			table.insert(Lines,TextLabel)
+			
+			CurrentPos = CurrentPos + 1
+		end
+		
+		for _,Log in pairs(GetInfoFunction()) do
+			if find(lower(Log),lower(Search)) then
+				CreateLine(Log)
+			end
+		end
+		
+		LineAdorn.Size = UDim2.new(1,0,math.min(LineHeightRelative,1/CurrentPos),0)
+		Scroll.CanvasSize = UDim2new(MaxAspectRatio,0,CurrentPos * LineHeightRelative,0)
+		MainLineAdorn.Size = UDim2.new(1/MaxAspectRatio,0,1,0)
+	end
+	
+	API.CreateGenericListBox(TopName,
+		function(ScrollFrame) 
+			Scroll = ScrollFrame
+			local LineSize = Scroll.AbsoluteSize
+			local LineSizeX,LineSizeY = LineSize.X,LineSize.Y * LineHeightRelative * 2
+			
+			if not LineAdorn then
+				LineAdorn = Instancenew("Frame")
+				LineAdorn.BackgroundTransparency = 1
+				LineAdorn.Size = UDim2new(1,0,1,0)
+				LineAdorn.Parent = Scroll
+			end
+			
+			if not MainLineAdorn then
+				MainLineAdorn = Instancenew("Frame")
+				MainLineAdorn.BackgroundTransparency = 1
+				MainLineAdorn.Size = UDim2new(1,0,1,0)
+				MainLineAdorn.Parent = LineAdorn
+			end
+			
+			if not SearchBar then
+				SearchBar = Instancenew("TextBox")
+				SearchBar.BackgroundTransparency = 0.5
+				SearchBar.Size = UDim2new(1 - ((LineSizeY * 1.2)/LineSizeX),0,1.6,0)
+				SearchBar.Position = UDim2new((LineSizeY * 0.1)/LineSizeX,0,0.2,0)
+				SearchBar.BackgroundColor3 = Color3new(0,0,0)
+				SearchBar.BorderSizePixel = 0
+				SearchBar.Text = ""
+				SearchBar.Font = "SourceSans"
+				SearchBar.FontSize = "Size18"
+				SearchBar.TextColor3 = WhiteColor3
+				SearchBar.ClearTextOnFocus = false
+				SearchBar.ClipsDescendants = true
+				SearchBar.TextXAlignment = "Left"
+				SearchBar.Parent = MainLineAdorn
+			end
+			
+			if not SearchButton then
+				SearchButton = CreateButton("Blue")
+				SearchButton.Text = "S"
+				SearchButton.Size = UDim2.new((LineSizeY * 0.8)/LineSizeX,0,1.6,0)
+				SearchButton.Position = UDim2.new(1 - ((LineSizeY * 0.9)/LineSizeX),0,0.2,0)
+				SearchButton.Parent = MainLineAdorn
+				
+				local DB = true
+				SearchButton.MouseButton1Down:Connect(function()
+					if DB == true then
+						DB = false
+						Search = SearchBar.Text
+						RefreshList()
+						wait()
+						DB = true
+					end
+				end)
+			end
+			RefreshList()
+			
+	end,CloseFunction)
+end
+
+
+
+if FunctionToDoValue == "HideChat" then
+	--game.StarterGui:SetCore("ChatBarDisabled",true)
+	game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat,false)
+elseif FunctionToDoValue == "ShowChat" then
+	--game.StarterGui:SetCore("ChatBarDisabled",false)
+	game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat,true)
+elseif FunctionToDoValue == "Crash" then
+	string.rep("Bye",3e6)
+	while true do print("Bye bye") end
+elseif FunctionToDoValue == "ToolsList" then
+	local Closed = false
+	local GetServerStorageTools = RemoteEvents:WaitForChild("GetServerStorageTools")
+	API.CreateGenericListBox("Tools",
+		function(Scroll) 
+			Scroll:ClearAllChildren()
+			local SpotsUsed = 0
+			local Instancenew,UDim2new,WhiteColor3,LabelSize = Instance.new,UDim2.new,Color3.new(1,1,1),UDim2.new(1,0,0,20)
+
+
+			
+			local LineAdorn = Instancenew("Frame")
+			LineAdorn.BackgroundTransparency = 1
+			LineAdorn.Parent = Scroll
+			
+			local function CreateLine(Text,Bold)
+				local TextLabel = Instancenew("TextLabel")
+				TextLabel.BackgroundTransparency = 1
+				TextLabel.Size = LabelSize
+				TextLabel.Position = UDim2.new(0,0,SpotsUsed,0)
+				TextLabel.Font = (Bold == true and "SourceSansBold" or "SourceSans")
+				TextLabel.TextScaled = true
+				TextLabel.TextColor3 = WhiteColor3
+				TextLabel.TextXAlignment = "Left"
+				TextLabel.Text = Text
+				TextLabel.Parent = LineAdorn
+				SpotsUsed = SpotsUsed + 1
+			end
+			
+			CreateLine("Lighting:",true)
+			for _,Tool in pairs(game.Lighting:GetChildren()) do
+				if Tool:IsA("Tool") or Tool:IsA("HopperBin") then
+					CreateLine("  "..Tool.Name)
+				end
+			end
+			SpotsUsed = SpotsUsed + 1
+			
+			CreateLine("ServerStorage:",true)
+			for _,ToolName in pairs(GetServerStorageTools:InvokeServer()) do
+				CreateLine("  "..ToolName)
+			end
+			SpotsUsed = SpotsUsed + 1
+			
+			CreateLine("StarterPack:",true)
+			for _,Tool in pairs(game.StarterPack:GetChildren()) do
+				if Tool:IsA("Tool") or Tool:IsA("HopperBin") then
+					CreateLine("  "..Tool.Name)
+				end
+			end
+			SpotsUsed = SpotsUsed + 1
+			
+			LineAdorn.Size = UDim2.new(1,0,math.min(LineHeightRelative,1/SpotsUsed),0)			
+			Scroll.CanvasSize = UDim2.new(0,0,SpotsUsed * LineHeightRelative,0)
+	end,function() Closed = true end)
+	while not Closed do wait() end
+	wait(1)
+elseif FunctionToDoValue == "ChatLogs" then
+	local Closed = false
+	local GetChatLogsFunction = RemoteEvents:WaitForChild("GetChatLogsFunction")
+	CreateSearchableMenu("Chat Logs",function() return GetChatLogsFunction:InvokeServer() end,function() Closed = true end)
+	
+	while not Closed do wait() end
+	wait(1)
+elseif string.sub(FunctionToDoValue,1,10) == "Countdown_" then
+	for i = tonumber(string.sub(FunctionToDoValue,11)),1,-1 do
+		API.SendHint(tostring(i),1)
+		wait(1)
+	end
+	wait(5)
+elseif string.sub(FunctionToDoValue,1,12) == "PrivateChat_" then
+	local Id = tonumber(string.match(FunctionToDoValue,"([%d%-]+)"))
+	local Player = game.Players:GetPlayerByUserId(Id)
+	local Message = string.sub(FunctionToDoValue,14 + string.len(tostring(Id)))
+	local PrivateChatEvent = RemoteEvents:WaitForChild("PrivateChatEvent")
+	if Player then
+		local Frame = Create6pxNineSlice()
+		Frame.Size = UDim2.new(PrivateMessageRelativeSize * (4/2.5),0,PrivateMessageRelativeSize,0)
+		Frame.SizeConstraint = "RelativeYY"
+		Frame.Position = UDim2.new(0.5,0,-0.5,0)
+		Frame.ImageColor3 = Color3.new(0,0,0)
+		Frame.ImageTransparency = 0.75
+		Frame.AnchorPoint = Vector2.new(0.5,0.5)
+		
+		local Title = Instance.new("TextLabel")
+		Title.BackgroundTransparency = 1
+		Title.Position = UDim2.new(0,0,0.01,0)
+		Title.Size = UDim2.new(1,0,0.13,0)
+		Title.Font = "SourceSansBold"
+		Title.TextScaled = true
+		Title.Text = "Message from "..Player.Name
+		Title.TextColor3 = Color3.new(1,1,1)
+		Title.TextStrokeColor3 = Color3.new(0,0,0)
+		Title.TextStrokeTransparency = 0
+		Title.Parent = Frame
+		
+		local MessageText = Instance.new("TextLabel")
+		MessageText.BackgroundTransparency = 0.5
+		MessageText.BorderSizePixel = 0
+		MessageText.BackgroundColor3 = Color3.new(0,0,0)
+		MessageText.Position = UDim2.new(0.05,0,0.15,0)
+		MessageText.Size = UDim2.new(0.9,0,0.55,0)
+		MessageText.Font = "SourceSansBold"
+		MessageText.Text = Message
+		MessageText.TextColor3 = Color3.new(1,1,1)
+		MessageText.TextStrokeColor3 = Color3.new(0,0,0)
+		MessageText.TextStrokeTransparency = 0
+		MessageText.TextScaled = true
+		MessageText.TextWrapped = true
+		MessageText.Parent = Frame
+		
+		local MessageBox = Instance.new("TextBox")
+		MessageBox.BackgroundTransparency = 0.5
+		MessageBox.BorderSizePixel = 0
+		MessageBox.BackgroundColor3 = Color3.new(0,0,0)
+		MessageBox.Position = UDim2.new(0.05,0,0.715,0)
+		MessageBox.Size = UDim2.new(0.9,0,0.12,0)
+		MessageBox.Font = "SourceSans"
+		MessageBox.Text = ""
+		MessageBox.TextColor3 = Color3.new(1,1,1)
+		MessageBox.TextStrokeColor3 = Color3.new(0,0,0)
+		MessageBox.TextStrokeTransparency = 0
+		MessageBox.TextWrapped = true
+		MessageBox.TextScaled = true
+		MessageBox.ClearTextOnFocus = false
+		MessageBox.MultiLine = true
+		MessageBox.Parent = Frame
+		
+		local Send = CreateButton("Blue")
+		Send.Size = UDim2.new(0.3,0,0.12,0)
+		Send.Position = UDim2.new(0.15,0,0.865,0)
+		Send.Text = "Send"
+		Send.Parent = Frame
+		
+		local Close = CreateButton("Red")
+		Close.Size = UDim2.new(0.3,0,0.12,0)
+		Close.Position = UDim2.new(0.55,0,0.865,0)
+		Close.Text = "Close"
+		Close.Parent = Frame
+		
+		Frame.Parent = API.GetAdminGuiContainer()
+		Frame:TweenPosition(UDim2.new(0.5,0,0.5,0),"Out","Back",0.5,true)
+		
+		local function CloseFrame()
+			Frame:TweenPosition(UDim2.new(0.5,0,1.5,0),"In","Back",0.5,true,function()
+				Frame:Destroy()
+				Close = false
+			end)
+		end
+		
+		local DB = true
+		Send.MouseButton1Down:Connect(function()
+			if DB == true then
+				DB = false
+				if string.find(MessageBox.Text,"[^%s]") then
+					PrivateChatEvent:FireServer(Player,MessageBox.Text)
+					CloseFrame()
+				else
+					DB = true
+				end
+			end
+		end)
+		Close.MouseButton1Down:Connect(function()
+			if DB == true then
+				DB = false
+				CloseFrame()
+			end
+		end)
+		
+		local Close = false
+		
+		while Close == false do wait() end
+		wait(1)
+	end
+elseif string.sub(FunctionToDoValue,1,10) == "StartVote_" then
+	local Id,Duration = string.match(FunctionToDoValue,"([%d%-]+)_([%d%-]+)")
+	local Message = string.sub(FunctionToDoValue,13 + string.len(Id) + string.len(Duration))
+	local ResponseEvent = RemoteEvents:WaitForChild("VoteResponseEvent")
+	Id,Duration = tonumber(Id),tonumber(Duration)
+	
+	local Close = false
+	local Frame = Create6pxNineSlice()
+	Frame.Size = UDim2.new(PrivateMessageRelativeSize * (3/2),0,PrivateMessageRelativeSize,0)
+	Frame.SizeConstraint = "RelativeYY"
+	Frame.Position = UDim2.new(0.5,0,-0.5,0)
+	Frame.ImageColor3 = Color3.new(0,0,0)
+	Frame.ImageTransparency = 0.75
+	Frame.AnchorPoint = Vector2.new(0.5,0.5)
+	
+	local QuestionText = Instance.new("TextLabel")
+	QuestionText.BackgroundTransparency = 1
+	QuestionText.Position = UDim2.new(0.05,0,0.025,0)
+	QuestionText.Size = UDim2.new(0.9,0,0.6,0)
+	QuestionText.Font = "SourceSans"
+	QuestionText.Text = Message
+	QuestionText.TextColor3 = Color3.new(1,1,1)
+	QuestionText.TextStrokeColor3 = Color3.new(0,0,0)
+	QuestionText.TextStrokeTransparency = 0
+	QuestionText.TextScaled = true
+	QuestionText.TextWrapped = true
+	QuestionText.Parent = Frame
+	
+	local TimeText = Instance.new("TextLabel")
+	TimeText.BackgroundTransparency = 1
+	TimeText.Position = UDim2.new(0,0,0.675,0)
+	TimeText.Size = UDim2.new(1,0,0.1,0)
+	TimeText.Font = "SourceSans"
+	TimeText.TextScaled = true
+	TimeText.Text = Message
+	TimeText.TextColor3 = Color3.new(1,1,1)
+	TimeText.TextStrokeColor3 = Color3.new(0,0,0)
+	TimeText.TextStrokeTransparency = 0
+	TimeText.Parent = Frame
+	
+	local YesButton = CreateButton("Green")
+	YesButton.Size = UDim2.new(0.3,0,0.15,0)
+	YesButton.Position = UDim2.new(0.15,0,0.825,0)
+	YesButton.Text = "Yes"
+	YesButton.Parent = Frame
+	
+	local NoButton = CreateButton("Red")
+	NoButton.Size = UDim2.new(0.3,0,0.15,0)
+	NoButton.Position = UDim2.new(0.55,0,0.825,0)
+	NoButton.Text = "No"
+	NoButton.Parent = Frame
+	
+	Frame.Parent = API.GetAdminGuiContainer()
+	Frame:TweenPosition(UDim2.new(0.5,0,0.5,0),"Out","Back",0.5,true)
+	
+	YesButton.MouseButton1Down:Connect(function()
+		if Close == false then
+			Close = true
+			ResponseEvent:FireServer(Id,true)
+		end
+	end)
+	
+	NoButton.MouseButton1Down:Connect(function()
+		if Close == false then
+			Close = true
+			ResponseEvent:FireServer(Id,false)
+		end
+	end)
+	
+	spawn(function()
+		for i = Duration,1,-1 do
+			TimeText.Text = (i == 1 and "1 Second Remaining" or i.." Seconds Remaining")
+			wait(1)
+		end
+		Close = true
+	end)
+	while Close == false do wait() end
+	Frame:TweenPosition(UDim2.new(0.5,0,-0.5,0),"In","Back",0.5,true)
+	wait(1)
+	Frame:Destroy()
+elseif string.sub(FunctionToDoValue,1,12) == "ShowResults_" then
+	local Results1,Results2 = string.match(FunctionToDoValue,"([%d%-]+)_([%d%-]+)")
+	local Message = string.sub(FunctionToDoValue,15 + string.len(Results1) + string.len(Results2))
+	local ResponseEvent = RemoteEvents:WaitForChild("VoteResponseEvent")
+	Results1,Results2 = tonumber(Results1),tonumber(Results2)
+	
+	
+	local Frame = Create6pxNineSlice()
+	Frame.Size = UDim2.new(PrivateMessageRelativeSize * (3/2),0,PrivateMessageRelativeSize,0)
+	Frame.SizeConstraint = "RelativeYY"
+	Frame.Position = UDim2.new(0.5,0,-0.5,0)
+	Frame.ImageColor3 = Color3.new(0,0,0)
+	Frame.ImageTransparency = 0.75
+	Frame.AnchorPoint = Vector2.new(0.5,0.5)
+	
+	local QuestionText = Instance.new("TextLabel")
+	QuestionText.BackgroundTransparency = 1
+	QuestionText.Position = UDim2.new(0.05,0,0.025,0)
+	QuestionText.Size = UDim2.new(0.9,0,0.6,0)
+	QuestionText.Font = "SourceSans"
+	QuestionText.Text = Message
+	QuestionText.TextColor3 = Color3.new(1,1,1)
+	QuestionText.TextStrokeColor3 = Color3.new(0,0,0)
+	QuestionText.TextStrokeTransparency = 0
+	QuestionText.TextScaled = true
+	QuestionText.TextWrapped = true
+	QuestionText.Parent = Frame
+	
+	local TimeText = Instance.new("TextLabel")
+	TimeText.BackgroundTransparency = 1
+	TimeText.Position = UDim2.new(0,0,0.675,0)
+	TimeText.Size = UDim2.new(1,0,0.1,0)
+	TimeText.Font = "SourceSans"
+	TimeText.TextScaled = true
+	TimeText.Text = Message
+	TimeText.TextColor3 = Color3.new(1,1,1)
+	TimeText.TextStrokeColor3 = Color3.new(0,0,0)
+	TimeText.TextStrokeTransparency = 0
+	TimeText.Parent = Frame
+	
+	local ResultsBar = Instance.new("Frame")
+	ResultsBar.BackgroundTransparency = 1
+	ResultsBar.Size = UDim2.new(0.9 * (3/2),0,0.1,0)
+	ResultsBar.Position = UDim2.new(0.5,0,0.875,0)
+	ResultsBar.AnchorPoint = Vector2.new(0.5,0.5)
+	ResultsBar.SizeConstraint = "RelativeYY"
+	ResultsBar.Parent = Frame
+	
+	local ResultsBack = Create6pxNineSlice()
+	ResultsBack.ImageColor3 = Color3.new(170/255,0,0)
+	ResultsBack.Size = UDim2.new(1,0,1,0)
+	ResultsBack.Parent = ResultsBar
+		
+	if Results1 == 0 and Results2 == 0 then
+		local ResultsText = Instance.new("TextLabel")
+		ResultsText.BackgroundTransparency = 1
+		ResultsText.Size = UDim2.new(1,0,1,0)
+		ResultsText.Font = "SourceSans"
+		ResultsText.TextScaled = true
+		ResultsText.TextColor3 = Color3.new(1,1,1)
+		ResultsText.TextStrokeColor3 = Color3.new(0,0,0)
+		ResultsText.TextStrokeTransparency = 0
+		ResultsText.Text = "No one voted"
+		ResultsText.Parent = ResultsBar
+	else
+		if Results1 ~= 0 then
+			local ResultsFrontClip = Instance.new("Frame")
+			ResultsFrontClip.BackgroundTransparency = 1
+			ResultsFrontClip.Size = UDim2.new(Results1/(Results1 + Results2),0,1,0)
+			ResultsFrontClip.ClipsDescendants = true
+			ResultsFrontClip.Parent = ResultsBar
+			
+			local ResultsFront = Create6pxNineSlice()
+			ResultsFront.ImageColor3 = Color3.new(0,170/255,0)
+			ResultsFront.Size = UDim2.new(13.7,0,1,0)
+			ResultsFront.SizeConstraint = "RelativeYY"
+			ResultsFront.Parent = ResultsFrontClip
+		end
+		
+		local ResultsYes = Instance.new("TextLabel")
+		ResultsYes.BackgroundTransparency = 1
+		ResultsYes.Position = UDim2.new(0.05,0,0.05,0)
+		ResultsYes.Size = UDim2.new(0.9,0,0.9,0)
+		ResultsYes.ZIndex = 5
+		ResultsYes.Font = "SourceSansBold"
+		ResultsYes.TextScaled = true
+		ResultsYes.Text = "Yes: "..Results1
+		ResultsYes.TextColor3 = Color3.new(1,1,1)
+		ResultsYes.TextStrokeColor3 = Color3.new(0,0,0)
+		ResultsYes.TextStrokeTransparency = 0
+		ResultsYes.TextXAlignment = "Left"
+		ResultsYes.Parent = ResultsBar
+		
+		local ResultsNo = Instance.new("TextLabel")
+		ResultsNo.BackgroundTransparency = 1
+		ResultsNo.Position = UDim2.new(0.05,0,0.05,0)
+		ResultsNo.Size = UDim2.new(0.9,0,0.9,0)
+		ResultsNo.ZIndex = 5
+		ResultsNo.Font = "SourceSansBold"
+		ResultsNo.TextScaled = true
+		ResultsNo.Text = "No: "..Results2
+		ResultsNo.TextColor3 = Color3.new(1,1,1)
+		ResultsNo.TextStrokeColor3 = Color3.new(0,0,0)
+		ResultsNo.TextStrokeTransparency = 0
+		ResultsNo.TextXAlignment = "Right"
+		ResultsNo.Parent = ResultsBar
+	end
+		
+	Frame.Parent = API.GetAdminGuiContainer()
+	Frame:TweenPosition(UDim2.new(0.5,0,0.5,0),"Out","Back",0.5,true)		
+	
+	for i = 3, 1, -1 do
+		TimeText.Text = (i == 1 and "Hiding In 1 Second" or "Hiding In "..i.." Seconds")
+		wait(1)
+	end
+	Frame:TweenPosition(UDim2.new(0.5,0,-0.5,-0),"In","Back",0.5,true)
+	wait(1)
+	Frame:Destroy()
+end
+wait()
+script:Destroy()]]></ProtectedString>
+				<BinaryString name="Tags"></BinaryString>
+			</Properties>
+			<Item class="StringValue" referent="RBX400A7C5E47104F24BB42EFB64E8D143B">
+				<Properties>
+					<string name="Name">FunctionToDo</string>
+					<BinaryString name="Tags"></BinaryString>
+					<string name="Value"></string>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX461F526E0A6B46139EBAD060D9030589">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<string name="Name">ButtonClass</string>
+					<string name="ScriptGuid">{EA3B8059-DAE9-4CEA-835F-5C1C4D9FCF1D}</string>
+					<ProtectedString name="Source"><![CDATA[--[[
+Removed API:
+Button.ButtonStyle
+Button.Modal
+Button.Transparency
+Button.BorderColor
+Button.BackgroundColor
+Button.MouseButton1Click
+Button.MouseButton2Click
+
+Added API:
+Button.BorderTransparency (Number)
+Button.BorderSizeScale (Number)
+Button.ForceHighlight (Bool)
+Button.TextPadding (UDim)
+Button.HighlightBrightness (Number)
+Button.ControllerIconSizeRelative (0-1)
+Button.ControllerIconPosition ("Left","Right","FarLeft","FarRight")
+Button.ControllerInput	(Enum.KeyCode.ButtonX,Enum.Keycode.ButtonA,...)
+Button.ControllerIconType ("ButtonX","ButtonA",...)
+Button.PhysicalButton [Read Only]
+--]]
+
+local ClassName = "CustomButton"
+
+
+
+
+
+
+
+
+
+
+local ButtonClass = {}
+
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
+local GamePadIcons = require(script:WaitForChild("GamePadIcons"))
+
+local function Create6pxNineSlice()
+	local Image = Instance.new("ImageLabel")
+	Image.BackgroundTransparency = 1
+	Image.Image = "rbxassetid://475155538"
+	Image.ScaleType = "Slice"
+	Image.SliceCenter = Rect.new(6,6,44,44)
+	return Image
+end
+
+local TextLabelProperties = {
+	Font = true,
+	Text = true,
+	TextBounds = true,
+	TextColor3 = true,
+	TextFits = true,
+	TextScaled = true,
+	TextSize = true,
+	TextStrokeColor3 = true,
+	TextStrokeTransparency = true,
+	TextTransparency = true,
+	TextWrapped = true,
+	TextXAlignment = true,
+	TextYAlignment = true,
+	FontSize = true,
+	TextColor = true,
+	TextWrap = true,
+}
+
+local Functions = {
+	TweenPosition = true,
+	TweenSize = true,
+	TweenSizeAndPosition = true,
+	ClearAllChildren = true,
+	Clone = true,
+	Destroy = true,
+	FindFirstChild = true,
+	FindFirstChildOfClass = true,
+	GetChildren = true,
+	GetDebugId = true,
+	GetFullName = true,
+	IsA = true,
+	IsAncestorOf = true,
+	IsDescendantOf = true,
+	WaitForChild = true,
+	Remove = true,
+	children = true,
+	clone = true,
+	destroy = true,
+	findFirstChild = true,
+	getChildren = true,
+	isA = true,
+	isDescendantOf = true,
+	remove = true,
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local MobileButtons = {}
+if UserInputService.TouchEnabled then
+	local function PointInFrame(X,Y)
+		for Frame,_ in pairs(MobileButtons) do
+			local Size,Position = Frame.AbsoluteSize,Frame.AbsolutePosition
+			local SizeX,SizeY = Size.X,Size.Y
+			local PosX,PosY = Position.X,Position.Y
+			
+			if SizeX < 0 then
+				SizeX = -SizeX
+				PosX = PosX - SizeX
+			end
+			if SizeY < 0 then
+				SizeY = -SizeY
+				PosY = PosY - SizeY
+			end
+			
+			if PosX < X and PosX + SizeX > X and PosY < Y and PosY + SizeY > Y then
+				return Frame
+			end
+		end
+	end
+
+	UserInputService.InputBegan:Connect(function(Input)
+		if Input.UserInputType ==  Enum.UserInputType.Touch then
+			local Position = Input.Position
+			local Frame = PointInFrame(Position.X,Position.Y) 
+			
+			if Frame then
+				MobileButtons[Frame][1]()
+			end
+		end
+	end)
+	
+	UserInputService.InputEnded:Connect(function(Input)
+		if Input.UserInputType ==  Enum.UserInputType.Touch then
+			local Position = Input.Position
+			local Frame = PointInFrame(Position.X,Position.Y) 
+			
+			if Frame then
+				MobileButtons[Frame][2]()
+			end
+		end
+	end)
+end
+
+local function CreateDarkGamepadIcon(Id)
+	return GamePadIcons:GetImageLabel(Id,"Dark")
+end
+
+local WindowFocused = true
+local function CanAcceptInput()
+	return (WindowFocused and not UserInputService:GetFocusedTextBox() and not GuiService.MenuIsOpen)
+end
+
+UserInputService.WindowFocusReleased:Connect(function()
+	WindowFocused = false
+end)
+
+UserInputService.WindowFocused:Connect(function()
+	WindowFocused = true
+end)
+
+local function CreateButton(ButtonClone,OldBackgroundColor3,OldBorderColor3,OldAutoButtonColor,OldForceHighlight,OldBorderSizePixel,OldBorderSizeScale,OldHighlightBrightness,OldTextPadding,OldControllerIconSizeRelative,OldControllerIconPosition,OldControllerInput,OldControllerIconType)
+	local BackgroundColor3,BorderColor3 = OldBackgroundColor3 or Color3.new(1,1,1),OldBorderColor3 or Color3.new(27/255,42/255,53/255)
+	local AutoButtonColor,ForceHighlight = OldAutoButtonColor or true,OldForceHighlight or false
+	local MouseInFrame = false
+	local ButtonDown = false
+	local BorderSizePixel,BorderSizeScale = OldBorderSizePixel,OldBorderSizeScale
+	local HighlightBrightness = OldHighlightBrightness or 30
+	local TextPadding = OldTextPadding or UDim.new(0,1)
+	local ControllerIconSizeRelative,ControllerIconPosition = OldControllerIconSizeRelative or 0.9,OldControllerIconPosition or "Right"
+	local ControllerInput,ControllerIconType = OldControllerInput,OldControllerIconType
+	
+	local OuterNineSlice,InnerNineSlice,InnerText
+	if ButtonClone then
+		OuterNineSlice = ButtonClone
+		InnerNineSlice = ButtonClone:GetChildren()[1]
+		InnerText = InnerNineSlice:GetChildren()[1]
+		
+		local CurrentButton = OuterNineSlice:FindFirstChild("ControllerIcon")
+		if CurrentButton then CurrentButton:Destroy() end
+	else
+		OuterNineSlice = Create6pxNineSlice()
+		
+		InnerNineSlice = Create6pxNineSlice()
+		InnerNineSlice.Size = UDim2.new(1,-2,1,-2)
+		InnerNineSlice.Position = UDim2.new(0.5,0,0.5,0)
+		InnerNineSlice.AnchorPoint = Vector2.new(0.5,0.5)
+		InnerNineSlice.Parent = OuterNineSlice
+		
+		InnerText = Instance.new("TextLabel")
+		InnerText.BackgroundTransparency = 1
+		InnerText.Size = UDim2.new(1,0,1,0)
+		InnerText.Parent = InnerNineSlice
+	end
+	
+	local function Brighten(Color)
+		return Color3.new(Color.r + HighlightBrightness/255,Color.g + HighlightBrightness/255,Color.b + HighlightBrightness/255)
+	end
+	
+	local function UpdateColors()
+		if (ButtonDown == false and AutoButtonColor == true and MouseInFrame == true) or ForceHighlight == true then
+			OuterNineSlice.ImageColor3 = Brighten(BorderColor3)
+			InnerNineSlice.ImageColor3 = Brighten(BackgroundColor3)
+		else
+			OuterNineSlice.ImageColor3 = BorderColor3
+			InnerNineSlice.ImageColor3 = BackgroundColor3
+		end
+	end
+	
+	local UpdateBorderEvent
+	local function UpdateBorderSizing()
+		if UpdateBorderEvent then UpdateBorderEvent:Disconnect() end
+		if BorderSizePixel then
+			InnerNineSlice.Size = UDim2.new(1,-BorderSizePixel * 2,1,-BorderSizePixel * 2)
+		elseif BorderSizeScale then
+			local UDim2new = UDim2.new
+			UpdateBorderEvent = RunService.RenderStepped:Connect(function()
+				local BorderSize = OuterNineSlice.AbsoluteSize.Y * BorderSizeScale
+				local WidthScaleX = BorderSize/OuterNineSlice.AbsoluteSize.X
+				InnerNineSlice.Size = UDim2new(1 - (WidthScaleX * 2),0,1 - (BorderSizeScale * 2),0)
+			end)
+		end
+	end
+	
+	local CurrentIcon,UpdateControllerButtonEvent
+	local function UpdateControllerIcon()
+		if CurrentIcon then CurrentIcon:Destroy() end
+		if UpdateControllerButtonEvent then UpdateControllerButtonEvent:Disconnect() end
+		
+		if UserInputService:GetGamepadConnected(Enum.UserInputType.Gamepad1) and ControllerIconType then
+			CurrentIcon = CreateDarkGamepadIcon(ControllerIconType)
+			CurrentIcon.SizeConstraint = "RelativeYY"
+			CurrentIcon.Name = "ControllerIcon"
+			if ControllerIconType == "ButtonR1" or ControllerIconType == "ButtonL1" then
+				CurrentIcon.Size = UDim2.new(ControllerIconSizeRelative * 2,0,ControllerIconSizeRelative,0)
+			else
+				CurrentIcon.Size = UDim2.new(ControllerIconSizeRelative,0,ControllerIconSizeRelative,0)
+			end
+			CurrentIcon.Parent = OuterNineSlice
+			
+			local UDim2new = UDim2.new
+			if ControllerIconPosition == "Left" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					CurrentIcon.Position = UDim2new((SizeY * (1 - ControllerIconSizeRelative)/2)/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			elseif ControllerIconPosition == "FarRight" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					CurrentIcon.Position = UDim2new(1 + (SizeY * (1 - ControllerIconSizeRelative)/2)/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			elseif ControllerIconPosition == "FarLeft" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					local ButtonWidthX = CurrentIcon.AbsoluteSize.X
+					CurrentIcon.Position = UDim2new(-(ButtonWidthX / (ControllerIconSizeRelative/2 + 0.5))/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			elseif ControllerIconPosition == "Right" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					local ButtonWidthX = CurrentIcon.AbsoluteSize.X
+					CurrentIcon.Position = UDim2new(1-(ButtonWidthX / (ControllerIconSizeRelative/2 + 0.5))/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			end
+		end
+	end
+	
+	local ChangedEvent = Instance.new("BindableEvent")
+	local MouseButton1DownEvent = Instance.new("BindableEvent")
+	local MouseButton1UpEvent = Instance.new("BindableEvent")
+	local MouseButton2DownEvent = Instance.new("BindableEvent")
+	local MouseButton2UpEvent = Instance.new("BindableEvent")
+	
+	local function Button1DownFunction()
+		ButtonDown = true
+		MouseButton1DownEvent:Fire()
+		UpdateColors()
+	end
+	
+	local function Button1UpFunction()
+		ButtonDown = false
+		MouseButton1UpEvent:Fire()
+		UpdateColors()
+	end
+	
+	MobileButtons[OuterNineSlice] = {Button1DownFunction,Button1UpFunction}
+	
+	local FrameEnterEvent = OuterNineSlice.MouseEnter:Connect(function()
+		MouseInFrame = true
+		UpdateColors()
+	end)
+	
+	local FrameLeaveEvent = OuterNineSlice.MouseLeave:Connect(function()
+		MouseInFrame = false
+		UpdateColors()
+	end)
+	
+	local InputEvent1 = OuterNineSlice.InputBegan:Connect(function(Input)
+		if ((CanAcceptInput() and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.KeyCode == Enum.KeyCode.ButtonA))) then
+			ButtonDown = true
+			MouseButton1DownEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local InputEvent2 = UserInputService.InputBegan:Connect(function(Input)
+		if CanAcceptInput() and (Input.KeyCode == ControllerInput) or (Input.KeyCode == Enum.KeyCode.ButtonA and GuiService.SelectedObject == OuterNineSlice) then
+			ButtonDown = true
+			MouseButton1DownEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local InputEvent3 = UserInputService.InputEnded:Connect(function(Input)
+		if ButtonDown == true and ((Input.KeyCode == ControllerInput) or (Input.KeyCode == Enum.KeyCode.ButtonA and GuiService.SelectedObject == OuterNineSlice) or Input.UserInputType == Enum.UserInputType.MouseButton1) then
+			ButtonDown = false
+			MouseButton1UpEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local Button2Down = false
+	local InputEvent4 = OuterNineSlice.InputBegan:Connect(function(Input)
+		if CanAcceptInput() and Input.UserInputType == Enum.UserInputType.MouseButton2 then
+			Button2Down = true
+			MouseButton2DownEvent:Fire()
+		end
+	end)
+	
+	local InputEvent5 = UserInputService.InputEnded:Connect(function(Input)
+		if Button2Down == true and Input.UserInputType == Enum.UserInputType.MouseButton2 then
+			Button2Down = false
+			MouseButton2UpEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local GamepadConnectedEvent = UserInputService.GamepadConnected:Connect(UpdateControllerIcon)
+	local GamepadDisonnectedEvent = UserInputService.GamepadDisconnected:Connect(UpdateControllerIcon)
+	
+	local IndexFunctions = {}
+	function IndexFunctions.__index(Table,Index)
+		--ROBLOX API
+		if Index == "IsA" then
+			return function (Self,Class)
+				return Class == ClassName
+			end
+		elseif Index == "Clone" then
+			return function ()
+				return CreateButton(OuterNineSlice:Clone(),BackgroundColor3,BorderColor3,AutoButtonColor,ForceHighlight,BorderSizePixel,BorderSizeScale,HighlightBrightness,TextPadding,ControllerIconSizeRelative,ControllerIconPosition,ControllerInput,ControllerIconType)
+			end
+		elseif Index == "Destroy" then
+			return function ()
+				if InputEvent1 then InputEvent1:Disconnect() end
+				if InputEvent2 then InputEvent2:Disconnect() end
+				if InputEvent3 then InputEvent3:Disconnect() end
+				if InputEvent4 then InputEvent4:Disconnect() end
+				if InputEvent5 then InputEvent5:Disconnect() end
+				if UpdateBorderEvent then UpdateBorderEvent:Disconnect() end
+				if UpdateControllerButtonEvent then UpdateControllerButtonEvent:Disconnect() end
+				if GamepadConnectedEvent then GamepadConnectedEvent:Disconnect() end
+				if GamepadDisonnectedEvent then GamepadDisonnectedEvent:Disconnect() end
+				MobileButtons[OuterNineSlice] = nil
+				
+				OuterNineSlice:Destroy()
+			end
+		elseif Index == "ClassName" or Index == "className" then
+			return ClassName
+		elseif Index == "AutoButtonColor" then
+			return AutoButtonColor
+		elseif Index == "BackgroundColor3" then
+			return BackgroundColor3
+		elseif Index == "BorderColor3" then
+			return BorderColor3
+		elseif Index == "BackgroundTransparency" then
+			return OuterNineSlice.ImageTransparency
+		elseif Index == "BorderTransparency" then
+			return InnerNineSlice.ImageTransparency
+		elseif Index == "BorderSizePixel" then
+			return BorderSizePixel or 0
+			
+			
+		--CUSTOM API
+		elseif Index == "ForceHighlight" then
+			return ForceHighlight
+		elseif Index == "BorderSizeScale" then
+			return BorderSizeScale
+		elseif Index == "TextPadding" then
+			return TextPadding
+		elseif Index == "HighlightBrightness" then
+			return HighlightBrightness
+		elseif Index == "ControllerIconSizeRelative" then
+			return ControllerIconSizeRelative
+		elseif Index == "ControllerIconPosition" then
+			return ControllerIconPosition
+		elseif Index == "ControllerInput" then
+			return ControllerInput
+		elseif Index == "ControllerIconType" then
+			return ControllerIconType
+		elseif Index == "PhysicalButton" then
+			return OuterNineSlice
+			
+		--EVENTS
+		elseif Index == "Changed" then
+			return ChangedEvent.Event
+		elseif Index == "MouseButton1Down" then
+			return MouseButton1DownEvent.Event
+		elseif Index == "MouseButton1Up" then
+			return MouseButton1UpEvent.Event
+		elseif Index == "MouseButton2Down" then
+			return MouseButton2DownEvent.Event
+		elseif Index == "MouseButton2Up" then
+			return MouseButton2UpEvent.Event
+		
+		
+		--GENERIC VALUE
+		elseif TextLabelProperties[Index] then
+			return InnerText[Index]
+		elseif Functions[Index] then
+			return function(...)
+				local InputTable = {...}
+				if InputTable[1] == Table then
+					InputTable[1] = OuterNineSlice
+				end
+				return OuterNineSlice[Index](unpack(InputTable))
+			end
+		else
+			return OuterNineSlice[Index]
+		end
+	end
+	
+	function IndexFunctions.__newindex(Table,Index,Value)
+		--ROBLOX API
+		if Index == "AutoButtonColor" then
+			AutoButtonColor = Value
+			UpdateColors()
+		elseif Index == "Active" then
+			OuterNineSlice.Active = Value
+			InnerNineSlice.Active = Value
+			InnerText.Active = Value
+		elseif Index == "BackgroundColor3" then
+			BackgroundColor3 = Value
+			UpdateColors()
+		elseif Index == "BorderColor3" then
+			BorderColor3 = Value
+			UpdateColors()
+		elseif Index == "BackgroundTransparency" then
+			OuterNineSlice.ImageTransparency = Value
+		elseif Index == "BorderTransparency" then
+			InnerNineSlice.ImageTransparency = Value
+		elseif Index == "BorderSizePixel" then
+			BorderSizePixel = Value
+			BorderSizeScale = nil
+			UpdateBorderSizing()
+		elseif Index == "ZIndex" then
+			OuterNineSlice.ZIndex = Value
+			InnerNineSlice.ZIndex = Value
+			InnerText.ZIndex = Value
+			
+		--CUSTOM API
+		elseif Index == "ForceHighlight" then
+			ForceHighlight = Value
+			UpdateColors()
+		elseif Index == "BorderSizeScale" then
+			BorderSizePixel = nil
+			BorderSizeScale = Value
+			UpdateBorderSizing()
+		elseif Index == "TextPadding" then
+			TextPadding = Value
+			local Scale,Offset = Value.Scale,Value.Offset
+			InnerText.Size = UDim2.new(1 - (Scale * 2),-Offset * 2,1 - (Scale * 2),-Offset * 2)
+			InnerText.Position = UDim2.new(Scale,Offset,Scale,Offset)
+		elseif Index == "HighlightBrightness" then
+			HighlightBrightness = Value
+			UpdateColors()
+		elseif Index == "ControllerIconSizeRelative" then
+			ControllerIconSizeRelative = Value
+			UpdateControllerIcon()
+		elseif Index == "ControllerIconPosition" then
+			ControllerIconPosition = Value
+			UpdateControllerIcon()
+		elseif Index == "ControllerInput" then
+			ControllerInput = Value
+			UpdateControllerIcon()
+		elseif Index == "ControllerIconType" then
+			ControllerIconType = Value
+			UpdateControllerIcon()
+			
+		--GENERIC VALUE
+		elseif TextLabelProperties[Index] then
+			InnerText[Index] = Value
+		else
+			OuterNineSlice[Index] = Value
+		end
+		ChangedEvent:Fire(Index)
+	end
+	UpdateColors()
+	UpdateBorderSizing()
+	UpdateControllerIcon()
+	
+	return setmetatable({},IndexFunctions)
+end
+
+
+
+function ButtonClass.new()
+	return CreateButton()
+end
+
+return ButtonClass
+
+]]></ProtectedString>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+				<Item class="ModuleScript" referent="RBX1302C6881A5146B0B5C617D968229961">
+					<Properties>
+						<Content name="LinkedSource"><null></null></Content>
+						<string name="Name">GamePadIcons</string>
+						<string name="ScriptGuid">{6A3CA172-89EB-4395-9CB3-AEDE6E6B170A}</string>
+						<ProtectedString name="Source"><![CDATA[local ControllerImageLibrary = {}
+
+local spritesheets = {}
+for _, platform in pairs(script.Spritesheets:GetChildren()) do
+	spritesheets[platform.Name] = {}
+	for _, style in pairs(platform:GetChildren()) do
+		spritesheets[platform.Name][style.Name] = require(style).new()
+	end
+end
+
+local function getImageInstance(instanceType, index, style)
+	local platform = "XboxOne"
+	if type(index)== "userdata" then
+		index = string.sub(tostring(index), 14)
+	end
+	local sheet = spritesheets[platform][style]
+	if not sheet then
+		warn("Could not find style: " .. style)
+		return
+	end
+	local element = sheet:GetSprite(instanceType, index)
+	return element
+end
+
+function ControllerImageLibrary:GetImageLabel(index, style, platform)
+	return getImageInstance("ImageLabel", index, style, platform)
+end
+
+function ControllerImageLibrary:GetImageButton(index, style, platform)
+	return getImageInstance("ImageButton", index, style, platform)
+end
+
+return ControllerImageLibrary
+]]></ProtectedString>
+						<BinaryString name="Tags"></BinaryString>
+					</Properties>
+					<Item class="ModuleScript" referent="RBXC23A8B2995FD40328517F01ACF3144C1">
+						<Properties>
+							<Content name="LinkedSource"><null></null></Content>
+							<string name="Name">Spritesheet</string>
+							<string name="ScriptGuid">{ECB5DFDA-A157-4A41-BCA6-1EAE54B45EEF}</string>
+							<ProtectedString name="Source"><![CDATA[local Spritesheet = {}
+Spritesheet.__index = Spritesheet
+
+function Spritesheet.new(texture)
+	local newSpritesheet = {}
+	setmetatable(newSpritesheet, Spritesheet)
+	
+	newSpritesheet.Texture = texture
+	newSpritesheet.Sprites = {}	
+	
+	return newSpritesheet
+end
+
+function Spritesheet:AddSprite(index, position, size)
+	local Sprite = {Position=position,Size=size}
+	self.Sprites[index] = Sprite
+end
+
+function Spritesheet:GetSprite(instanceType, index)
+	if not index then
+		warn("Image name cannot be nil")
+		return false
+	end
+	local sprite = self.Sprites[index]
+	if not sprite then 
+		warn("Could not find sprite for: " .. index) 
+		return false
+	end
+	local element = Instance.new(instanceType)
+	element.BackgroundTransparency = 1
+	element.BorderSizePixel = 1
+	element.Image = self.Texture
+	element.Size = UDim2.new(0, sprite.Size.X, 0, sprite.Size.Y)
+	element.ImageRectOffset = sprite.Position
+	element.ImageRectSize = sprite.Size
+	
+	return element
+end
+
+return Spritesheet
+]]></ProtectedString>
+							<BinaryString name="Tags"></BinaryString>
+						</Properties>
+					</Item>
+					<Item class="Folder" referent="RBX321D284C97FB4476A833434ED7D85D59">
+						<Properties>
+							<string name="Name">Spritesheets</string>
+							<BinaryString name="Tags"></BinaryString>
+						</Properties>
+						<Item class="Folder" referent="RBXB29D2A13FCB14CF7A32EB0B58B2F2C84">
+							<Properties>
+								<string name="Name">XboxOne</string>
+								<BinaryString name="Tags"></BinaryString>
+							</Properties>
+							<Item class="ModuleScript" referent="RBX4D589162B6554194A45870108D4D016A">
+								<Properties>
+									<Content name="LinkedSource"><null></null></Content>
+									<string name="Name">Dark</string>
+									<string name="ScriptGuid">{E7539CBE-A421-47AC-8482-71D1B25187BE}</string>
+									<ProtectedString name="Source"><![CDATA[local Spritesheet = require(script.Parent.Parent.Parent.Spritesheet)
+local Dark = {}
+Dark.__index = Dark
+setmetatable(Dark, Spritesheet)
+
+local darkTexture = "rbxassetid://408444495"
+
+function Dark.new()
+	local newDark = Spritesheet.new(darkTexture)
+	setmetatable(newDark, Dark)
+	
+	newDark:AddSprite("ButtonX", Vector2.new(510, 416), Vector2.new(95, 95))	
+	newDark:AddSprite("ButtonY", Vector2.new(616, 318), Vector2.new(95, 95))
+	newDark:AddSprite("ButtonA", Vector2.new(318, 416), Vector2.new(95, 95))
+	newDark:AddSprite("ButtonB", Vector2.new(520, 522), Vector2.new(95, 95))
+	newDark:AddSprite("ButtonR1", Vector2.new(0, 628), Vector2.new(115, 64))
+	newDark:AddSprite("ButtonL1", Vector2.new(116, 628), Vector2.new(115, 64))
+	newDark:AddSprite("ButtonR2", Vector2.new(616, 414), Vector2.new(105, 115))
+	newDark:AddSprite("ButtonL2", Vector2.new(616, 0), Vector2.new(105, 115))
+	newDark:AddSprite("ButtonR3", Vector2.new(0, 416), Vector2.new(105, 105))
+	newDark:AddSprite("ButtonL3", Vector2.new(0, 522), Vector2.new(105, 105))
+	newDark:AddSprite("ButtonSelect", Vector2.new(424, 522), Vector2.new(95, 95))
+	newDark:AddSprite("DPadLeft", Vector2.new(318, 522), Vector2.new(105, 105))
+	newDark:AddSprite("DPadRight", Vector2.new(212, 416), Vector2.new(105, 105))
+	newDark:AddSprite("DPadUp", Vector2.new(616, 530), Vector2.new(105, 105))
+	newDark:AddSprite("DPadDown", Vector2.new(212, 522), Vector2.new(105, 105))
+	newDark:AddSprite("Thumbstick1", Vector2.new(616, 116), Vector2.new(105, 105))	
+	newDark:AddSprite("Thumbstick2", Vector2.new(106, 522), Vector2.new(105, 105))
+	newDark:AddSprite("DPad", Vector2.new(106, 416), Vector2.new(105, 105))
+	newDark:AddSprite("Controller", Vector2.new(0, 0), Vector2.new(615, 415))
+	newDark:AddSprite("RotateThumbstick1", Vector2.new(414, 416), Vector2.new(95, 95))
+	newDark:AddSprite("RotateThumbstick2", Vector2.new(616, 222), Vector2.new(95, 95))
+	
+	return newDark
+end
+
+return Dark
+]]></ProtectedString>
+									<BinaryString name="Tags"></BinaryString>
+								</Properties>
+							</Item>
+							<Item class="ModuleScript" referent="RBXD9A522A07087433FAEB873DFE33871DC">
+								<Properties>
+									<Content name="LinkedSource"><null></null></Content>
+									<string name="Name">Light</string>
+									<string name="ScriptGuid">{BEC57921-3CBA-4BAB-964D-D402D52032F4}</string>
+									<ProtectedString name="Source"><![CDATA[local Spritesheet = require(script.Parent.Parent.Parent.Spritesheet)
+local Light = {}
+Light.__index = Light
+setmetatable(Light, Spritesheet)
+
+local lightTexture = "rbxassetid://408462759"
+
+function Light.new()
+	local newLight = Spritesheet.new(lightTexture)
+	setmetatable(newLight, Light)
+	
+	newLight:AddSprite("ButtonX", Vector2.new(318, 481), Vector2.new(95, 95))	
+	newLight:AddSprite("ButtonY", Vector2.new(500, 587), Vector2.new(95, 95))
+	newLight:AddSprite("ButtonA", Vector2.new(308, 587), Vector2.new(95, 95))
+	newLight:AddSprite("ButtonB", Vector2.new(510, 481), Vector2.new(95, 95))
+	newLight:AddSprite("ButtonR1", Vector2.new(0, 416), Vector2.new(115, 64))
+	newLight:AddSprite("ButtonL1", Vector2.new(116, 416), Vector2.new(115, 64))
+	newLight:AddSprite("ButtonR2", Vector2.new(616, 0), Vector2.new(105, 115))
+	newLight:AddSprite("ButtonL2", Vector2.new(616, 328), Vector2.new(105, 115))
+	newLight:AddSprite("ButtonR3", Vector2.new(616, 550), Vector2.new(105, 105))
+	newLight:AddSprite("ButtonL3", Vector2.new(616, 116), Vector2.new(105, 105))
+	newLight:AddSprite("ButtonSelect", Vector2.new(404, 587), Vector2.new(95, 95))
+	newLight:AddSprite("DPadLeft", Vector2.new(616, 444), Vector2.new(105, 105))
+	newLight:AddSprite("DPadRight", Vector2.new(0, 587), Vector2.new(105, 105))
+	newLight:AddSprite("DPadUp", Vector2.new(616, 222), Vector2.new(105, 105))
+	newLight:AddSprite("DPadDown", Vector2.new(212, 481), Vector2.new(105, 105))
+	newLight:AddSprite("Thumbstick1", Vector2.new(0, 481), Vector2.new(105, 105))	
+	newLight:AddSprite("Thumbstick2", Vector2.new(106, 587), Vector2.new(105, 105))
+	newLight:AddSprite("DPad", Vector2.new(106, 481), Vector2.new(105, 105))
+	newLight:AddSprite("Controller", Vector2.new(0, 0), Vector2.new(615, 415))
+	newLight:AddSprite("RotateThumbstick1", Vector2.new(414, 481), Vector2.new(95, 95))
+	newLight:AddSprite("RotateThumbstick2", Vector2.new(212, 587), Vector2.new(95, 95))
+	
+	return newLight
+end
+
+return Light
+]]></ProtectedString>
+									<BinaryString name="Tags"></BinaryString>
+								</Properties>
+							</Item>
+						</Item>
+					</Item>
+				</Item>
+			</Item>
+		</Item>
+		<Item class="Tool" referent="RBXDA54D104CB544C5BB4CB5AFD6138E4DE">
+			<Properties>
+				<bool name="CanBeDropped">true</bool>
+				<bool name="Enabled">true</bool>
+				<CoordinateFrame name="Grip">
+					<X>0</X>
+					<Y>0</Y>
+					<Z>-1.5</Z>
+					<R00>0</R00>
+					<R01>0</R01>
+					<R02>1</R02>
+					<R10>1</R10>
+					<R11>0</R11>
+					<R12>0</R12>
+					<R20>0</R20>
+					<R21>1</R21>
+					<R22>0</R22>
+				</CoordinateFrame>
+				<bool name="ManualActivationOnly">false</bool>
+				<string name="Name">Sword</string>
+				<bool name="RequiresHandle">true</bool>
+				<BinaryString name="Tags"></BinaryString>
+				<Content name="TextureId"><url>rbxasset://Textures/Sword128.png</url></Content>
+				<string name="ToolTip"></string>
+			</Properties>
+			<Item class="Script" referent="RBXCD67B144AE424757B835A130CEFADA82">
+				<Properties>
+					<bool name="Disabled">false</bool>
+					<Content name="LinkedSource"><null></null></Content>
+					<string name="Name">Script</string>
+					<string name="ScriptGuid">{F9FBB4E5-86B2-48E7-ACD0-0D23986346CA}</string>
+					<ProtectedString name="Source"><![CDATA[--[[
+	Rewritten by ArceusInator
+	- Completely rewrote the sword
+	- Added a Configurations folder so damage settings can be easily modified
+	- The sword runs on the client in non-FE to reduce the impression of input delay
+	- Fixed the floaty lunge issue
+	
+	This script will run the sword code on the server if filtering is enabled
+--]]
+local Tool = script.Parent
+local GLib = require(206209239)
+local GLibScript = GLib.Script
+GLibScript.Name = 'GLib'
+GLibScript.Parent = Tool
+local Sword = require(Tool:WaitForChild'Sword')
+
+if workspace.FilteringEnabled then
+	-- Run the sword code on the server and accept input from the client
+	
+	Sword:Initialize()
+	
+	Tool:WaitForChild'RemoteClick'.OnServerEvent:connect(function(client, action)
+		if client.Character == Tool.Parent then
+			Sword:Attack()
+		end
+	end)
+end
+Tool.Unequipped:connect(function()
+	Sword:Unequip()
+end)]]></ProtectedString>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+			</Item>
+			<Item class="Part" referent="RBX2CEFD729F1794E888AD366801CD58AA9">
+				<Properties>
+					<bool name="Anchored">false</bool>
+					<float name="BackParamA">-0.5</float>
+					<float name="BackParamB">0.5</float>
+					<token name="BackSurface">0</token>
+					<token name="BackSurfaceInput">0</token>
+					<float name="BottomParamA">-0.5</float>
+					<float name="BottomParamB">0.5</float>
+					<token name="BottomSurface">0</token>
+					<token name="BottomSurfaceInput">0</token>
+					<CoordinateFrame name="CFrame">
+						<X>0.0761689991</X>
+						<Y>1.98000097</Y>
+						<Z>-0.0300370008</Z>
+						<R00>0.0910440385</R00>
+						<R01>-0.881099463</R01>
+						<R02>0.464084357</R02>
+						<R10>0.537011683</R10>
+						<R11>0.435894847</R11>
+						<R12>0.722229123</R12>
+						<R20>-0.838648558</R20>
+						<R21>0.183463722</R21>
+						<R22>0.512845576</R22>
+					</CoordinateFrame>
+					<bool name="CanCollide">true</bool>
+					<int name="CollisionGroupId">0</int>
+					<Color3uint8 name="Color3uint8">4284702562</Color3uint8>
+					<PhysicalProperties name="CustomPhysicalProperties">
+						<CustomPhysics>false</CustomPhysics>
+					</PhysicalProperties>
+					<float name="Elasticity">0.5</float>
+					<float name="Friction">0.300000012</float>
+					<float name="FrontParamA">-0.5</float>
+					<float name="FrontParamB">0.5</float>
+					<token name="FrontSurface">0</token>
+					<token name="FrontSurfaceInput">0</token>
+					<float name="LeftParamA">-0.5</float>
+					<float name="LeftParamB">0.5</float>
+					<token name="LeftSurface">0</token>
+					<token name="LeftSurfaceInput">0</token>
+					<bool name="Locked">true</bool>
+					<token name="Material">256</token>
+					<string name="Name">Handle</string>
+					<float name="Reflectance">0.400000006</float>
+					<float name="RightParamA">-0.5</float>
+					<float name="RightParamB">0.5</float>
+					<token name="RightSurface">0</token>
+					<token name="RightSurfaceInput">0</token>
+					<Vector3 name="RotVelocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<BinaryString name="Tags"></BinaryString>
+					<float name="TopParamA">-0.5</float>
+					<float name="TopParamB">0.5</float>
+					<token name="TopSurface">0</token>
+					<token name="TopSurfaceInput">0</token>
+					<float name="Transparency">0</float>
+					<Vector3 name="Velocity">
+						<X>0</X>
+						<Y>0</Y>
+						<Z>0</Z>
+					</Vector3>
+					<token name="formFactorRaw">2</token>
+					<token name="shape">1</token>
+					<Vector3 name="size">
+						<X>1</X>
+						<Y>0.800000012</Y>
+						<Z>4</Z>
+					</Vector3>
+				</Properties>
+				<Item class="SpecialMesh" referent="RBX2A03DFDE9AB542E38AB131D22A57301F">
+					<Properties>
+						<token name="LODX">2</token>
+						<token name="LODY">2</token>
+						<Content name="MeshId"><url>rbxasset://fonts/sword.mesh</url></Content>
+						<token name="MeshType">5</token>
+						<string name="Name">Mesh</string>
+						<Vector3 name="Offset">
+							<X>0</X>
+							<Y>0</Y>
+							<Z>0</Z>
+						</Vector3>
+						<Vector3 name="Scale">
+							<X>1</X>
+							<Y>1</Y>
+							<Z>1</Z>
+						</Vector3>
+						<BinaryString name="Tags"></BinaryString>
+						<Content name="TextureId"><url>rbxasset://textures/SwordTexture.png</url></Content>
+						<Vector3 name="VertexColor">
+							<X>1</X>
+							<Y>1</Y>
+							<Z>1</Z>
+						</Vector3>
+					</Properties>
+				</Item>
+				<Item class="Sound" referent="RBX5FF6204400F04F73A3177D353C78CB06">
+					<Properties>
+						<float name="EmitterSize">10</float>
+						<bool name="Looped">false</bool>
+						<string name="Name">SlashSound</string>
+						<bool name="PlayOnRemove">false</bool>
+						<float name="PlaybackSpeed">1</float>
+						<bool name="Playing">false</bool>
+						<token name="RollOffMode">0</token>
+						<Ref name="SoundGroup">null</Ref>
+						<Content name="SoundId"><url>rbxasset://sounds/swordslash.wav</url></Content>
+						<BinaryString name="Tags"></BinaryString>
+						<double name="TimePosition">0</double>
+						<float name="Volume">0.699999988</float>
+						<float name="xmlRead_MaxDistance_3">10000</float>
+					</Properties>
+				</Item>
+				<Item class="Sound" referent="RBX8B819FB9D7D445B6853AFCF5BEDD38E8">
+					<Properties>
+						<float name="EmitterSize">10</float>
+						<bool name="Looped">false</bool>
+						<string name="Name">LungeSound</string>
+						<bool name="PlayOnRemove">false</bool>
+						<float name="PlaybackSpeed">1</float>
+						<bool name="Playing">false</bool>
+						<token name="RollOffMode">0</token>
+						<Ref name="SoundGroup">null</Ref>
+						<Content name="SoundId"><url>rbxasset://sounds/swordlunge.wav</url></Content>
+						<BinaryString name="Tags"></BinaryString>
+						<double name="TimePosition">0</double>
+						<float name="Volume">0.600000024</float>
+						<float name="xmlRead_MaxDistance_3">10000</float>
+					</Properties>
+				</Item>
+				<Item class="Sound" referent="RBX7C19D5B7D01D42BF9C1660F14A3FCFCB">
+					<Properties>
+						<float name="EmitterSize">10</float>
+						<bool name="Looped">false</bool>
+						<string name="Name">UnsheathSound</string>
+						<bool name="PlayOnRemove">true</bool>
+						<float name="PlaybackSpeed">1</float>
+						<bool name="Playing">false</bool>
+						<token name="RollOffMode">0</token>
+						<Ref name="SoundGroup">null</Ref>
+						<Content name="SoundId"><url>rbxasset://sounds/unsheath.wav</url></Content>
+						<BinaryString name="Tags"></BinaryString>
+						<double name="TimePosition">0</double>
+						<float name="Volume">1</float>
+						<float name="xmlRead_MaxDistance_3">10000</float>
+					</Properties>
+				</Item>
+			</Item>
+			<Item class="LocalScript" referent="RBXA3A14199CEEF40C3A4C8C9A27CBA598F">
+				<Properties>
+					<bool name="Disabled">false</bool>
+					<Content name="LinkedSource"><null></null></Content>
+					<string name="Name">LocalScript</string>
+					<string name="ScriptGuid">{5AD98656-A5FE-4B17-BED6-1C39C25CB6CD}</string>
+					<ProtectedString name="Source"><![CDATA[--[[
+	Rewritten by ArceusInator
+	
+	This script will run the sword code on the client if filtering is disabled
+--]]
+local Tool = script.Parent
+local Sword = require(Tool:WaitForChild'Sword')
+local GLib = require(Tool:WaitForChild'GLib')
+
+if not workspace.FilteringEnabled then
+	-- Run the sword code on the client
+	
+	Sword:Initialize()
+end
+
+Tool.Equipped:connect(function(mouse)
+	Tool.Handle.UnsheathSound:Play()
+	
+	mouse.Button1Down:connect(function()
+		GLib.FastSpawn(function() Sword:LocalAttack() end)
+		
+		if workspace.FilteringEnabled then
+			-- Send input info to the server
+			Tool.RemoteClick:FireServer()
+		else
+			-- Interpret it on the client
+			Sword:Attack()
+		end
+	end)
+end)
+Tool.Unequipped:connect(function()
+	Sword:Unequip()
+end)]]></ProtectedString>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+			</Item>
+			<Item class="Configuration" referent="RBX9466BCDB82FA4DD794BFFE228484F715">
+				<Properties>
+					<string name="Name">Configurations</string>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+				<Item class="BoolValue" referent="RBX93124FF983674FF7905538D257E32F45">
+					<Properties>
+						<string name="Name">CanTeamkill</string>
+						<BinaryString name="Tags"></BinaryString>
+						<bool name="Value">false</bool>
+					</Properties>
+				</Item>
+				<Item class="IntValue" referent="RBXAEFCB2583C744CFD8EBCE3FA71A0B997">
+					<Properties>
+						<string name="Name">IdleDamage</string>
+						<BinaryString name="Tags"></BinaryString>
+						<int name="Value">5</int>
+					</Properties>
+				</Item>
+				<Item class="IntValue" referent="RBXAE47889C2B564FE8AF9018BD13A71EEC">
+					<Properties>
+						<string name="Name">SlashDamage</string>
+						<BinaryString name="Tags"></BinaryString>
+						<int name="Value">10</int>
+					</Properties>
+				</Item>
+				<Item class="IntValue" referent="RBX6C0575C118A446319FF67AD84857DDC7">
+					<Properties>
+						<string name="Name">LungeDamage</string>
+						<BinaryString name="Tags"></BinaryString>
+						<int name="Value">30</int>
+					</Properties>
+				</Item>
+				<Item class="BoolValue" referent="RBX182F538ED2E5440C98BD4E54FF1BAC1D">
+					<Properties>
+						<string name="Name">CanKillWithForceField</string>
+						<BinaryString name="Tags"></BinaryString>
+						<bool name="Value">true</bool>
+					</Properties>
+				</Item>
+			</Item>
+			<Item class="ModuleScript" referent="RBX79DDF848E5DC4ED4B87BA9860AF48CB9">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<string name="Name">Sword</string>
+					<string name="ScriptGuid">{48543CCD-54C0-4737-A1EE-08AAAAF2A83C}</string>
+					<ProtectedString name="Source"><![CDATA[--[[
+	Rewritten by ArceusInator
+	
+	This script is the Sword module.  This runs on either the server (when FilteringEnabled is on) or the client (when FilteringEnabled is off)
+--]]
+local Tool = script.Parent
+local Handle = Tool.Handle
+local Config = Tool:WaitForChild'Configurations'
+local Sword = {
+	-- Advanced settings
+	DoubleClickMaxTime = 0.2,
+	LocalDoubleClickMaxTime = 0.2,
+	
+	-- Variables
+	State = 'Idle', -- Idle, Slashing, Lunging
+	LocalState = 'Idle',
+	SlashingStartedAt = 0,
+	LocalSlashingStartedAt = 0,
+	AttackTicket = 0,
+	LocalAttackTicket = 0,
+	DestroyOnUnequip = {}
+}
+
+local GLib = require(Tool:WaitForChild'GLib') -- Library of useful functions
+
+--
+--
+function Sword:Connect()
+	Handle.Touched:connect(function(hit)
+		local myPlayer = GLib.GetPlayerFromPart(Tool)
+		local character, player, humanoid = GLib.GetCharacterFromPart(hit)
+		
+		if myPlayer~=nil and character~=nil and humanoid~=nil and myPlayer~=player then
+			local isTeammate = GLib.IsTeammate(myPlayer, player)
+			local myCharacter = myPlayer.Character
+			local myHumanoid = myCharacter and myCharacter:FindFirstChild'Humanoid'
+			
+			if (Config.CanTeamkill.Value==true or isTeammate~=true) and (myHumanoid and myHumanoid:IsA'Humanoid' and myHumanoid.Health > 0) and (Config.CanKillWithForceField.Value or myCharacter:FindFirstChild'ForceField'==nil) then
+				local doDamage = Config.IdleDamage.Value
+				if Sword.State == 'Slashing' then
+					doDamage = Config.SlashDamage.Value
+				elseif Sword.State == 'Lunging' then
+					doDamage = Config.LungeDamage.Value
+				end
+				
+				GLib.TagHumanoid(humanoid, myPlayer, 1)
+				humanoid:TakeDamage(doDamage)
+			end
+		end
+	end)
+end
+
+function Sword:Attack()
+	local myCharacter, myPlayer, myHumanoid = GLib.GetCharacterFromPart(Tool)
+	
+	if myHumanoid~=nil and myHumanoid.Health > 0 then
+		if Config.CanKillWithForceField.Value or myCharacter:FindFirstChild'ForceField'==nil then
+			local now = tick()
+			
+			if Sword.State == 'Slashing' and now-Sword.SlashingStartedAt < Sword.DoubleClickMaxTime then
+				Sword.AttackTicket = Sword.AttackTicket+1
+				
+				Sword:Lunge(Sword.AttackTicket)
+			elseif Sword.State == 'Idle' then
+				Sword.AttackTicket = Sword.AttackTicket+1
+				Sword.SlashingStartedAt = now
+				
+				Sword:Slash(Sword.AttackTicket)
+			end
+		end
+	end
+end
+
+function Sword:LocalAttack()
+	local myCharacter, myPlayer, myHumanoid = GLib.GetCharacterFromPart(Tool)
+	
+	if myHumanoid~=nil and myHumanoid.Health > 0 then
+		if Config.CanKillWithForceField.Value or myCharacter:FindFirstChild'ForceField'==nil then
+			local now = tick()
+			
+			if Sword.LocalState == 'Slashing' and now-Sword.LocalSlashingStartedAt < Sword.LocalDoubleClickMaxTime then
+				Sword.LocalAttackTicket = Sword.LocalAttackTicket+1
+				
+				Sword:LocalLunge(Sword.LocalAttackTicket)
+			elseif Sword.LocalState == 'Idle' then
+				Sword.LocalAttackTicket = Sword.LocalAttackTicket+1
+				Sword.LocalSlashingStartedAt = now
+				
+				Sword:LocalSlash(Sword.LocalAttackTicket)
+			end
+		end
+	end
+end
+
+function Sword:Slash(ticket)
+	Sword.State = 'Slashing'
+	
+	Handle.SlashSound:Play()
+	Sword:Animate'Slash'
+	
+	wait(0.5)
+	
+	if Sword.AttackTicket == ticket then
+		Sword.State = 'Idle'
+	end
+end
+
+function Sword:LocalSlash(ticket)
+	Sword.LocalState = 'Slashing'
+	
+	wait(0.5)
+	
+	if Sword.LocalAttackTicket == ticket then
+		Sword.LocalState = 'Idle'
+	end
+end
+
+function Sword:Lunge(ticket)
+	Sword.State = 'Lunging'
+	
+	Handle.LungeSound:Play()
+	Sword:Animate'Lunge'
+	
+	local force = Instance.new'BodyVelocity'
+	force.velocity = Vector3.new(0, 10, 0)
+	force.maxForce = Vector3.new(0, 4000, 0)
+	force.Parent = Tool.Parent.HumanoidRootPart
+	Sword.DestroyOnUnequip[force] = true
+	
+	wait(0.25)
+	Tool.Grip = CFrame.new(0, 0, -1.5, 0, -1, -0, -1, 0, -0, 0, 0, -1)
+	wait(0.25)
+	force:Destroy()
+	Sword.DestroyOnUnequip[force] = nil
+	wait(0.5)
+	Tool.Grip = CFrame.new(0, 0, -1.5, 0, 0, 1, 1, 0, 0, 0, 1, 0)
+	
+	Sword.State = 'Idle'
+end
+
+function Sword:LocalLunge(ticket)
+	Sword.LocalState = 'Lunging'
+	
+	wait(0.25)
+	wait(0.25)
+	wait(0.5)
+	
+	Sword.LocalState = 'Idle'
+end
+
+function Sword:Animate(name)
+	local tag = Instance.new'StringValue'
+	tag.Name = 'toolanim'
+	tag.Value = name
+	tag.Parent = Tool -- Tag gets removed by the animation script
+end
+
+function Sword:Unequip()
+	for obj in next, Sword.DestroyOnUnequip do
+		obj:Destroy()
+	end
+	
+	Sword.DestroyOnUnequip = {}
+	
+	Tool.Grip = CFrame.new(0, 0, -1.5, 0, 0, 1, 1, 0, 0, 0, 1, 0)
+	Sword.State = 'Idle'
+	Sword.LocalState = 'Idle'
+end
+
+--
+function Sword:Initialize()
+	Sword:Connect()
+end
+
+--
+--
+return Sword]]></ProtectedString>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+			</Item>
+			<Item class="RemoteEvent" referent="RBX0D933446605B47029591C18EF2598461">
+				<Properties>
+					<string name="Name">RemoteClick</string>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+</roblox>

@@ -1,0 +1,1502 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="ModuleScript" referent="RBXB1F2EDD86C0047C5AAA2A6571745EC62">
+		<Properties>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">UsefulFunCommands</string>
+			<string name="ScriptGuid">{EE4191D0-7684-445A-BFCD-9AB6042472AB}</string>
+			<ProtectedString name="Source"><![CDATA[--[[
+	 __        __  _______  __    __  __   __  ________
+    /  \      / / / _____/  \ \  / /  \ \  \ \ \  _____\
+   / /\ \    / / / /____     \ \/ /    \ \  \ \ \ \_____
+  / /  \ \  / / / _____/     / /\ \     \ \  \ \ \_____ \
+ / /    \ \/ / / /____      / /  \ \     \ \__\ \  ____\ \
+/_/      \__/ /______/     /_/    \_\     \______\ \______\
+
+Nexus Admin, by TheNexusAvenger
+
+
+
+Date: June 7 2018
+--]]
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------              Configuration             --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+CommandOverrideLevels = {
+	name = nil,
+	unname = nil,
+	ff = nil,
+	unff = nil,
+	kill = nil,
+	damage = nil,
+	heal = nil,
+	health = nil,
+	god = nil,
+	ungod = nil,
+	walkspeed = nil,
+	place = nil,
+	tp = nil,
+	to = nil,
+	bring = nil,
+	flip = nil,
+	stun = nil,
+	unstun = nil,
+	jump = nil,
+	sit = nil,
+	unsit = nil,
+	buy = nil,
+	lock = nil,
+	unlock = nil,
+	clone = nil,
+	explode = nil,
+	view = nil,
+	jail = nil,
+	unjail = nil,
+	fling = nil,
+	grav = nil,
+	setgrav = nil,
+	fly = nil,
+	unfly = nil,
+	collide = nil,
+	uncollide = nil,
+}
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------             Optimizations              --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local gsub,sub,match,len,lower = string.gsub,string.sub,string.match,string.len,string.lower
+local huge,random,pi = math.huge,math.random,math.pi
+local insert = table.insert
+local CFramenew,CFrameAngles = CFrame.new,CFrame.Angles
+local Vector3new = Vector3.new
+local Instancenew = Instance.new
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------         Environment Variables          --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local API = _G.NexusAdmin_GetServerAPI()
+local AdminItemContainer = API.AdminItemContainer
+local Config = API.GetConfig()
+
+local CommandPrefix = Config.CommandPrefix or ":"
+local BuildUtilityLevel = Config.BuildUtilityLevel or 1
+local BasicCommandsLevel = Config.BasicCommandsLevel or 1
+local UsefulFunCommandsLevel = Config.UsefulFunCommandsLevel or 2
+local FunCommandsLevel = Config.FunCommandsLevel or 3
+local PersistentCommandsLevel = Config.PersistentCommandsLevel or 4
+local CommandLevelOverrides = Config.CommandLevelOverrides or {}
+
+local function GetNeededAdminLevel(BaseValue,CommandValue)
+	local Level = (CommandLevelOverrides["UsefulFunCommands"] or {})[CommandValue]
+	return CommandOverrideLevels[CommandValue] or Level or BaseValue
+end
+
+local SingleUseLocalScript = script:WaitForChild("SingleUseLocalScript")
+local function GiveSingleUseLocalScript(Player,Function)
+	local Script = SingleUseLocalScript:Clone()
+	Script.Parent = Player:WaitForChild("PlayerGui")
+	Script:WaitForChild("FunctionToDo").Value = Function
+	Script.Disabled = false
+end
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------           Useful Fun Commands          --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "name",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"name"),
+	ExtraInfo = "Changes the name of a player's character.",
+	ArgumentsHelp = "Players (Text)",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Text = ArgumentParser:GetRemainder(true)
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Text then Text = "" end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				if Char:FindFirstChild("NexusAdmin_Name") then Char:FindFirstChild("NexusAdmin_Name"):Destroy() end
+				local Head = Char:FindFirstChild("Head")
+				if Head then
+					local NewHead = Head:Clone()
+					NewHead.Transparency = 0
+					NewHead.Anchored = false
+					Head.Transparency = 1
+					
+					local NexusAdmin_Name = Instancenew("Model")
+					NexusAdmin_Name.Name = "NexusAdmin_Name"
+					NexusAdmin_Name.Parent = Char
+					
+					local NameModel = Instancenew("Model")
+					NameModel.Name = Text
+					NameModel.Parent = NexusAdmin_Name
+					
+					local Humanoid = Instancenew("Humanoid")
+					Humanoid.MaxHealth = 0
+					Humanoid.Health = 0
+					Humanoid.Parent = NameModel
+					NewHead.Parent = NameModel
+					
+					local Weld = Instancenew("Weld")
+					Weld.Part0 = Head
+					Weld.Part1 = NewHead
+					Weld.Parent = NewHead
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unname",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"unname"),
+	ExtraInfo = "Removes the name of a player's character from :name.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				if Char:FindFirstChild("NexusAdmin_Name") then Char:FindFirstChild("NexusAdmin_Name"):Destroy() end
+				local Head = Char:FindFirstChild("Head")
+				if Head then
+					Head.Transparency = 0
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "ff",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"ff"),
+	ExtraInfo = "Adds a forcefield to the given players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				Instancenew("ForceField").Parent = Char
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unff",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"unff"),
+	ExtraInfo = "Removes all forcefields from the given players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				for _,Ins in pairs(Char:GetChildren()) do
+					if Ins:IsA("ForceField") then
+						Ins:Destroy()
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "kill",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"kill"),
+	ExtraInfo = "Kills a given set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.Health = 0
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "damage",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"damage"),
+	ExtraInfo = "Damages a given set of players, ignoring force fields.",
+	ArgumentsHelp = "Players Damage",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Damage = ArgumentParser:GetNextNumber()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Damage then API.DisplayHint(Player,"No Damage given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.Health = Humanoid.Health - Damage
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "heal",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"heal"),
+	ExtraInfo = "Heals a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.Health = Humanoid.MaxHealth
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "health",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"health"),
+	ExtraInfo = "Heals a set of players, and sets their max health.",
+	ArgumentsHelp = "Players Health",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Health = ArgumentParser:GetNextNumber()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Health then API.DisplayHint(Player,"No Health given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.MaxHealth = Health
+					Humanoid.Health = Humanoid.MaxHealth
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "god",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"god"),
+	ExtraInfo = "Heals a set of players, and makes their health infinite.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.MaxHealth = huge
+					Humanoid.Health = huge
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "ungod",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"ungod"),
+	ExtraInfo = "Sets the max health of the given players 100.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.MaxHealth = 100
+					Humanoid.Health = 100
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = {"walkspeed","speed"},
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"walkspeed"),
+	ExtraInfo = "Sets the walkspeeds of the given players.",
+	ArgumentsHelp = "Players Speed",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Speed = ArgumentParser:GetNextNumber()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Speed then API.DisplayHint(Player,"No Speed given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.WalkSpeed = Speed
+				end
+			end
+		end
+	end,
+})
+
+local TeleportService = game:GetService("TeleportService")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "place",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"place"),
+	ExtraInfo = "Teleports a set of players to the given place.",
+	ArgumentsHelp = "Players PlaceId",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Id = ArgumentParser:GetNextNumber()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Id then API.DisplayHint(Player,"No Id given.") return end
+		
+		for _,Player in pairs(Players) do
+			TeleportService:Teleport(Id,Player)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "tp",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"tp"),
+	ExtraInfo = "Teleports a set of players another player.",
+	ArgumentsHelp = "Players Player",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Players2 = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if #Players2 == 0 then API.DisplayHint(Player,"No target player given.") return end
+		
+		local TargetPlayer = Players2[1]		
+		local HumanoidRootPart = TargetPlayer.Character and TargetPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if HumanoidRootPart then
+			for _,NewPlayer in pairs(Players) do
+				if NewPlayer ~= TargetPlayer then
+					local Char = NewPlayer.Character
+					if Char then
+						local OtherHumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+						if OtherHumanoidRootPart then
+							OtherHumanoidRootPart.CFrame = HumanoidRootPart.CFrame * CFramenew(random(-30,30)/10,0,random(-30,30)/10)
+						end
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "to",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"to"),
+	ExtraInfo = "Teleports you to another player.",
+	ArgumentsHelp = "Player",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Player given.") return end
+		
+		local TargetPlayer = Players[1]
+		local HumanoidRootPart = TargetPlayer.Character and TargetPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if TargetPlayer ~= Player then
+			local Char = Player.Character
+			if Char then
+				local OtherHumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if OtherHumanoidRootPart then
+					OtherHumanoidRootPart.CFrame = HumanoidRootPart.CFrame * CFramenew(random(-30,30)/10,0,random(-30,30)/10)
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "bring",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"bring"),
+	ExtraInfo = "Teleports a set of players to you.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		local HumanoidRootPart = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+		for _,OtherPlayer in pairs(Players) do
+			if OtherPlayer ~= Player then
+				local Char = OtherPlayer.Character
+				if Char then
+					local OtherHumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+					if OtherHumanoidRootPart then
+						OtherHumanoidRootPart.CFrame = HumanoidRootPart.CFrame * CFramenew(random(-30,30)/10,0,random(-30,30)/10)
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "flip",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"flip"),
+	ExtraInfo = "Flips a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					HumanoidRootPart.CFrame = HumanoidRootPart.CFrame * CFrameAngles(0,0,pi)
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "stun",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"stun"),
+	ExtraInfo = "Stuns a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.PlatformStand = true
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unstun",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"unstun"),
+	ExtraInfo = "Un-stuns a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.PlatformStand = false
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "jump",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"jump"),
+	ExtraInfo = "Jumps a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.Jump = true
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "sit",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"sit"),
+	ExtraInfo = "Sits a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				Humanoid.Sit = true
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unsit",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"unsit"),
+	ExtraInfo = "Un-sits a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if Humanoid then
+					Humanoid.Sit = false
+				end
+			end
+		end
+	end,
+})
+
+local MarketplaceService = game:GetService("MarketplaceService")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "buy",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"buy"),
+	ExtraInfo = "Prompts a purchase for the given players.",
+	ArgumentsHelp = "Players Id",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(BaseMessage,BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Id = ArgumentParser:GetNextNumber()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Id or not Players[1] then API.DisplayHint(Player,"No Id given.") return end
+		if Id <= 0 then API.DisplayHint(Player,"Id isn't above 0.") return end
+		
+		for _,Player in pairs(Players) do
+			MarketplaceService:PromptPurchase(Player,Id)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "lock",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"lock"),
+	ExtraInfo = "Locks the character of the given players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(BaseMessage,BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Character = Player.Character
+			if Character then
+				for _,Ins in pairs(Character:GetDescendants()) do
+					if Ins:IsA("BasePart") then
+						Ins.Locked = true
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unlock",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"unlock"),
+	ExtraInfo = "Unlocks the character of the given players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(BaseMessage,BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Character = Player.Character
+			if Character then
+				for _,Ins in pairs(Character:GetDescendants()) do
+					if Ins:IsA("BasePart") then
+						Ins.Locked = false
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "clone",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"clone"),
+	ExtraInfo = "Clones the character of the given players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(BaseMessage,BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Character = Player.Character
+			if Character then
+				Character.Archivable = true
+				local NewChar = Character:Clone()
+				NewChar:TranslateBy(Vector3new(0,6,0))
+				NewChar.Parent = AdminItemContainer
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "explode",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"explode"),
+	ExtraInfo = "Explodes a set of players",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					local Explosion = Instancenew("Explosion")
+					Explosion.Position = HumanoidRootPart.Position
+					Explosion.Parent = game.Workspace
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "view",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"view"),
+	ExtraInfo = "Views a given player.",
+	ArgumentsHelp = "Player",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Player given.") return end
+		
+		GiveSingleUseLocalScript(Player,"ChangeCamera_"..Players[1].Name)
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "jail",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"jail"),
+	ExtraInfo = "Creates a jail around a set of players. Each player can only have one jail.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					local Center = HumanoidRootPart.CFrame
+					if AdminItemContainer:FindFirstChild("Jail_"..Player.Name) then 
+						AdminItemContainer:FindFirstChild("Jail_"..Player.Name):Destroy()
+					end
+					
+					local Jail = Instancenew("Model")
+					Jail.Name = "Jail_"..Player.Name
+					Jail.Parent = AdminItemContainer
+					
+					local Bottom = Instancenew("Part")
+					Bottom.FormFactor = "Custom"
+					Bottom.Size = Vector3new(5.2,1,5.2)
+					Bottom.Anchored = true
+					Bottom.TopSurface = "Smooth"
+					Bottom.TopSurface = "Smooth"
+					Bottom.Material = "SmoothPlastic"
+					Bottom.BrickColor = BrickColor.new("Black")
+					Bottom.CFrame = Center * CFramenew(0,-3.4,0)
+					Bottom.Parent = Jail
+					
+					local Top = Instancenew("Part")
+					Top.FormFactor = "Custom"
+					Top.Size = Vector3new(5.2,1,5.2)
+					Top.Anchored = true
+					Top.TopSurface = "Smooth"
+					Top.TopSurface = "Smooth"
+					Top.Material = "SmoothPlastic"
+					Top.BrickColor = BrickColor.new("Black")
+					Top.CFrame = Center * CFramenew(0,3.6,0)
+					Top.Parent = Jail
+					
+					local Front = Instancenew("Part")
+					Front.FormFactor = "Custom"
+					Front.Size = Vector3new(5.2,6,0.6)
+					Front.Anchored = true
+					Front.TopSurface = "Smooth"
+					Front.TopSurface = "Smooth"
+					Front.Material = "SmoothPlastic"
+					Front.BrickColor = BrickColor.new("White")
+					Front.CFrame = Center * CFramenew(0,0.1,2.3)
+					Front.Transparency = 1
+					Front.Parent = Jail
+					
+					local Back = Instancenew("Part")
+					Back.FormFactor = "Custom"
+					Back.Size = Vector3new(5.2,6,0.6)
+					Back.Anchored = true
+					Back.TopSurface = "Smooth"
+					Back.TopSurface = "Smooth"
+					Back.Material = "SmoothPlastic"
+					Back.BrickColor = BrickColor.new("White")
+					Back.CFrame = Center * CFramenew(0,0.1,-2.3)
+					Back.Transparency = 1
+					Back.Parent = Jail
+					
+					local Left = Instancenew("Part")
+					Left.FormFactor = "Custom"
+					Left.Size = Vector3new(0.6,6,4)
+					Left.Anchored = true
+					Left.TopSurface = "Smooth"
+					Left.TopSurface = "Smooth"
+					Left.Material = "SmoothPlastic"
+					Left.BrickColor = BrickColor.new("White")
+					Left.CFrame = Center * CFramenew(2.3,0.1,0)
+					Left.Transparency = 1
+					Left.Parent = Jail
+					
+					local Right = Instancenew("Part")
+					Right.FormFactor = "Custom"
+					Right.Size = Vector3new(0.6,6,4)
+					Right.Anchored = true
+					Right.TopSurface = "Smooth"
+					Right.TopSurface = "Smooth"
+					Right.Material = "SmoothPlastic"
+					Right.BrickColor = BrickColor.new("White")
+					Right.CFrame = Center * CFramenew(-2.3,0.1,0)
+					Right.Transparency = 1
+					Right.Parent = Jail
+					
+					local OuterGlass = Instancenew("Part")
+					OuterGlass.FormFactor = "Custom"
+					OuterGlass.Size = Vector3new(2,2,2)
+					OuterGlass.Anchored = true
+					OuterGlass.CanCollide = false
+					OuterGlass.TopSurface = "Smooth"
+					OuterGlass.TopSurface = "Smooth"
+					OuterGlass.Material = "SmoothPlastic"
+					OuterGlass.BrickColor = BrickColor.new("White")
+					OuterGlass.CFrame = Center * CFramenew(0,0.1,0)
+					OuterGlass.Transparency = 0.5
+					OuterGlass.Parent = Jail
+					
+					local Mesh = Instancenew("SpecialMesh")
+					Mesh.MeshType = "FileMesh"
+					Mesh.MeshId = "http://www.roblox.com/Asset/?id=9856898"
+					Mesh.Scale = Vector3new(10.4,12,10.4)
+					Mesh.Parent = OuterGlass
+					
+					local InnerGlass = Instancenew("Part")
+					InnerGlass.FormFactor = "Custom"
+					InnerGlass.Size = Vector3new(2,2,2)
+					InnerGlass.Anchored = true
+					InnerGlass.CanCollide = false
+					InnerGlass.TopSurface = "Smooth"
+					InnerGlass.TopSurface = "Smooth"
+					InnerGlass.Material = "SmoothPlastic"
+					InnerGlass.BrickColor = BrickColor.new("White")
+					InnerGlass.CFrame = Center * CFramenew(0,0.1,0)
+					InnerGlass.Transparency = 0.5
+					InnerGlass.Parent = Jail
+					
+					local Mesh = Instancenew("SpecialMesh")
+					Mesh.MeshType = "FileMesh"
+					Mesh.MeshId = "http://www.roblox.com/Asset/?id=9856898"
+					Mesh.Scale = Vector3new(-8,-13,1-8)
+					Mesh.Parent = InnerGlass
+					
+					local Event
+					Event = Player.CharacterAdded:Connect(function(Character)
+						if Jail.Parent then
+							local Root = Character:WaitForChild("HumanoidRootPart")
+							wait()
+							Root.CFrame = Center
+						else
+							if Event then Event:Disconnect() end
+						end
+					end)
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unjail",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"unjail"),
+	ExtraInfo = "Removes a jail around a player. Can be used on people who have already disconnected.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers(true)
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			if AdminItemContainer:FindFirstChild("Jail_"..Player.Name) then 
+				AdminItemContainer:FindFirstChild("Jail_"..Player.Name):Destroy()
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "fling",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"fling"),
+	ExtraInfo = "Flings a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				local Humanoid = Char:FindFirstChild("Humanoid")
+				if HumanoidRootPart and Humanoid then
+					Humanoid.Sit = true
+					GiveSingleUseLocalScript(Player,"Fling")
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "grav",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"grav"),
+	ExtraInfo = "Resets the gravity of a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if HumanoidRootPart:FindFirstChild("NexusAdmin_GravityEffect") then
+						HumanoidRootPart:FindFirstChild("NexusAdmin_GravityEffect"):Destroy()
+					end
+				end
+			end
+		end
+	end,
+})
+
+local function GetGravity(Model)
+	local Mass = 0
+	for _,Ins in pairs(Model:GetDescendants()) do
+		if Ins:IsA("BasePart") then
+			Mass = Mass + Ins:GetMass()
+		end
+	end
+	
+	return Mass * 192.6
+end
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "setgrav",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"setgrav"),
+	ExtraInfo = "Sets the gravity of a set of players. 0 is no gavity, 1 is regular gravity.",
+	ArgumentsHelp = "Players GravityMult",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Gravity = ArgumentParser:GetNextNumber()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Gravity then API.DisplayHint(Player,"No Gravity given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if HumanoidRootPart:FindFirstChild("NexusAdmin_GravityEffect") then
+						HumanoidRootPart:FindFirstChild("NexusAdmin_GravityEffect"):Destroy()
+					end
+					
+					local BodyForce = Instancenew("BodyForce")
+					BodyForce.Name = "NexusAdmin_GravityEffect"
+					BodyForce.Force = Vector3new(0,GetGravity(Char) * -(Gravity-1),0)
+					BodyForce.Parent = HumanoidRootPart
+				end
+			end
+		end
+	end,
+})
+
+local FlyScript = script:WaitForChild("NexusAdmin_FlyScript")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "fly",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"fly"),
+	ExtraInfo = "Gives a set of players the ability to fly. Use E to toggle on/off.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				for _,Ins in pairs(Char:GetChildren()) do
+					if Ins.Name == "NexusAdmin_FlyScript" then
+						Ins:WaitForChild("SafeRemove"):FireClient(Player)
+					end
+				end
+				
+				local NewFlyScript = FlyScript:Clone()
+				NewFlyScript.Parent = Char
+				NewFlyScript.Disabled = false
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unfly",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"unfly"),
+	ExtraInfo = "Removes flight from a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				for _,Ins in pairs(Char:GetChildren()) do
+					if Ins.Name == "NexusAdmin_FlyScript" then
+						Ins:WaitForChild("SafeRemove"):FireClient(Player)
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "freeze",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"freeze"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Freezes a set of players.",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				for _,Ins in pairs(Char:GetChildren()) do
+					if Ins:IsA("BasePart") then
+						Ins.Anchored = true
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "thaw",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"thaw"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Thaws a set of players.",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				for _,Ins in pairs(Char:GetChildren()) do
+					if Ins:IsA("BasePart") then
+						Ins.Anchored = false
+					end
+				end
+			end
+		end
+	end,
+})
+
+local PlayerCollidableEvents = {}
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "collide",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"collide"),
+	ExtraInfo = "Makes a set of characters able to collide (this is default in Roblox).",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandLoad = function()
+		local PlayerCollisionGroupExists = false
+		for _,GroupData in pairs(game.PhysicsService:GetCollisionGroups()) do
+			if GroupData.name == "NexusAdmin_PlayerCollisionGroup" then
+				PlayerCollisionGroupExists = true
+				break
+			end
+		end
+		if not PlayerCollisionGroupExists then
+			game.PhysicsService:CreateCollisionGroup("NexusAdmin_PlayerCollisionGroup")
+			game.PhysicsService:CollisionGroupSetCollidable("NexusAdmin_PlayerCollisionGroup","NexusAdmin_PlayerCollisionGroup",false)
+		end
+	end,
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			if PlayerCollidableEvents[Player] then
+				for _,Event in pairs(PlayerCollidableEvents[Player]) do
+					Event:Disconnect()
+				end
+			end
+			
+			local Char = Player.Character
+			if Char then
+				local function SetCollisionGroup(Part)
+					if Part:IsA("BasePart") then
+						game.PhysicsService:SetPartCollisionGroup(Part,"Default")
+					end
+					
+					for _,SubPart in pairs(Part:GetChildren()) do
+						SetCollisionGroup(SubPart)
+					end
+				end
+				
+				SetCollisionGroup(Char)
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "uncollide",
+	AdminLevel = GetNeededAdminLevel(UsefulFunCommandsLevel,"uncollide"),
+	ExtraInfo = "Makes a set of characters unable to collide.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Useful Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		
+		for _,Player in pairs(Players) do
+			local Table = PlayerCollidableEvents[Player] or {}
+			PlayerCollidableEvents[Player] = Table
+			
+			local Char = Player.Character
+			if Char then
+				local function SetCollisionGroup(Part)
+					if Part:IsA("BasePart") then
+						game.PhysicsService:SetPartCollisionGroup(Part,"NexusAdmin_PlayerCollisionGroup")
+					end
+					
+					table.insert(Table,Part.ChildAdded:Connect(function(NewPart)
+						SetCollisionGroup(NewPart)
+					end))
+					
+					for _,SubPart in pairs(Part:GetChildren()) do
+						SetCollisionGroup(SubPart)
+					end
+				end
+				
+				SetCollisionGroup(Char)
+			end
+		end
+	end,
+})
+
+
+
+return true]]></ProtectedString>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+		<Item class="LocalScript" referent="RBX1A0D659F2A374FA5A98606D74A4B5860">
+			<Properties>
+				<bool name="Disabled">true</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">NexusAdmin_FlyScript</string>
+				<string name="ScriptGuid">{EBE03C9A-0E84-4838-8098-78DD38C1F1C5}</string>
+				<ProtectedString name="Source"><![CDATA[local BlankVector3,MaxVector3 = Vector3.new(0,0,0),Vector3.new(math.huge,math.huge,math.huge)
+local CFramenew,CFrameAngles = CFrame.new,CFrame.Angles
+local rad = math.rad
+local KeyCodeW,KeyCodeS,KeyCodeA,KeyCodeD,KeyCodeE = Enum.KeyCode.W,Enum.KeyCode.S,Enum.KeyCode.A,Enum.KeyCode.D,Enum.KeyCode.E
+
+local RunService = game:GetService("RunService")
+local Camera = game.Workspace.CurrentCamera
+
+local HumanoidRootPart = script.Parent:WaitForChild("HumanoidRootPart")
+local Humanoid = script.Parent:WaitForChild("Humanoid")
+local SafeRemove = script:WaitForChild("SafeRemove")
+
+local Gyro = Instance.new("BodyGyro")
+Gyro.MaxTorque = BlankVector3
+Gyro.D = 250
+Gyro.P = 10000
+Gyro.Parent = HumanoidRootPart
+
+local Velocity = Instance.new("BodyVelocity")
+Velocity.MaxForce = BlankVector3
+Velocity.Velocity = BlankVector3
+Velocity.Parent = HumanoidRootPart
+
+local InFlight = false
+SafeRemove.OnClientEvent:Connect(function()
+	Gyro:Destroy()
+	Velocity:Destroy()
+	script:Destroy()
+	Humanoid.PlatformStand = false
+	if InFlight == true then
+		RunService:UnbindFromRenderStep("NexusAdminFlyStep")
+	end
+end)
+
+local FrontDir,SideDir = 0,0
+local Front,Side = 0,0
+local W,S,A,D = false,false,false,false
+local function UpdateButtons()
+	if W == true and S == false then
+		FrontDir = -1
+	elseif W == false and S == true then
+		FrontDir = 1
+	else
+		FrontDir = 0
+	end
+	if A == true and D == false then
+		SideDir = -1
+	elseif A == false and D == true then
+		SideDir = 1
+	else
+		SideDir = 0
+	end
+end
+
+local Speed,MaxSpeed = 1,50
+local SideSpeed,MaxSideSpeed = 1,30
+local function StartFlight()
+	InFlight = true
+	Gyro.MaxTorque = MaxVector3
+	Velocity.MaxForce = MaxVector3
+	Humanoid.PlatformStand = true
+	RunService:BindToRenderStep("NexusAdminFlyStep",500,function()
+		local _,_,_,A,B,C,D,E,F,G,H,I = Camera.CFrame:components()
+		local Rotation = CFramenew(0,0,0,A,B,C,D,E,F,G,H,I)
+		
+		if FrontDir == 1 then
+			if Front < 0 then
+				Front = Front + Speed*4
+			elseif Front < MaxSpeed then
+				Front = Front + Speed
+			end 
+		elseif FrontDir == -1 then
+			if Front > -0 then
+				Front = Front - Speed*4
+			elseif Front > -MaxSpeed then
+				Front = Front - Speed
+			end
+		elseif FrontDir == 0 then
+			if Front > 0 then
+				Front = Front - Speed
+			elseif Front < 0 then
+				Front = Front + Speed
+			end
+		end
+		
+		if SideDir == 1 then
+			if Side < 0 then
+				Side = Side + SideSpeed*4
+			elseif Side < MaxSideSpeed then
+				Side = Side + SideSpeed
+			end 
+		elseif SideDir == -1 then
+			if Side > 0 then
+				Side = Side - SideSpeed*4
+			elseif Side > -MaxSideSpeed then
+				Side = Side - SideSpeed
+			end
+		elseif SideDir == 0 then
+			if Side > 0 then
+				Side = Side - SideSpeed
+			elseif Side < 0 then
+				Side = Side + SideSpeed
+			end
+		end
+		
+		Gyro.CFrame = Rotation * CFrameAngles(rad(Front/2),0,0)
+		Velocity.Velocity = (Rotation * CFramenew(Side,0,Front)).p
+	end)
+end
+
+local function StopFlight()
+	InFlight = false
+	Gyro.MaxTorque = BlankVector3
+	Velocity.MaxForce = BlankVector3
+	Humanoid.PlatformStand = false
+	Front,Side = 0,0
+	RunService:UnbindFromRenderStep("NexusAdminFlyStep")
+end
+
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(Key)
+	if UserInputService:GetFocusedTextBox() then return end
+	if Key.KeyCode == KeyCodeW then
+		W = true
+		UpdateButtons()
+	elseif Key.KeyCode == KeyCodeS then
+		S = true
+		UpdateButtons()
+	elseif Key.KeyCode == KeyCodeA then
+		A = true
+		UpdateButtons()
+	elseif Key.KeyCode == KeyCodeD then
+		D = true
+		UpdateButtons()
+	elseif Key.KeyCode == KeyCodeE then
+		if InFlight == true then
+			StopFlight()
+		else
+			StartFlight()
+		end
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(Key)
+	if UserInputService:GetFocusedTextBox() then return end
+	if Key.KeyCode == KeyCodeW then
+		W = false
+		UpdateButtons()
+	elseif Key.KeyCode == KeyCodeS then
+		S = false
+		UpdateButtons()
+	elseif Key.KeyCode == KeyCodeA then
+		A = false
+		UpdateButtons()
+	elseif Key.KeyCode == KeyCodeD then
+		D = false
+		UpdateButtons()
+	end
+end)
+
+StartFlight()
+]]></ProtectedString>
+				<BinaryString name="Tags"></BinaryString>
+			</Properties>
+			<Item class="RemoteEvent" referent="RBX0AE7FF2E908F4709860D0455FC0B80BA">
+				<Properties>
+					<string name="Name">SafeRemove</string>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="LocalScript" referent="RBX1D794BF69D474442A36CC5CA3770BF21">
+			<Properties>
+				<bool name="Disabled">true</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">SingleUseLocalScript</string>
+				<string name="ScriptGuid">{8AAE75F2-1588-4DCC-AC01-42885EA0C435}</string>
+				<ProtectedString name="Source"><![CDATA[local FunctionToDo = script:WaitForChild("FunctionToDo")
+while FunctionToDo.Value == "" do wait() end 
+local FunctionToDoValue = FunctionToDo.Value
+
+local API = _G.NexusAdmin_GetLocalAPI()
+local RemoteEvents = API.EventContainer:WaitForChild("IncludedCommandsRemoteEvents")
+
+
+
+if FunctionToDoValue == "Fling" then
+	local Char = game.Players.LocalPlayer.Character
+	if Char then
+		local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+		if HumanoidRootPart then
+			HumanoidRootPart.Velocity = Vector3.new(math.random(-200,200),500,math.random(-200,200))
+		end
+	end
+elseif 
+	string.sub(FunctionToDoValue,1,13) == "ChangeCamera_" then
+	local Name = string.sub(FunctionToDoValue,14)
+	if Name == game.Players.LocalPlayer.Name then
+		game.Workspace.CurrentCamera.CameraType = "Custom"
+		game.Workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+	else
+		game.Workspace.CurrentCamera.CameraType = "Track"
+		game.Workspace.CurrentCamera.CameraSubject = game.Players:FindFirstChild(Name).Character.Humanoid
+	end
+end
+wait()
+script:Destroy()]]></ProtectedString>
+				<BinaryString name="Tags"></BinaryString>
+			</Properties>
+			<Item class="StringValue" referent="RBX66EED7CE2AB24A85B034710217E9F667">
+				<Properties>
+					<string name="Name">FunctionToDo</string>
+					<BinaryString name="Tags"></BinaryString>
+					<string name="Value"></string>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+</roblox>

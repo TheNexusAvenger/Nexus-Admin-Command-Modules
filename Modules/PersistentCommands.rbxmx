@@ -1,0 +1,1241 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="ModuleScript" referent="RBX8C30D1B6DCB84F3196C4BBC017313B06">
+		<Properties>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">PersistentCommands</string>
+			<string name="ScriptGuid">{E89C045B-0E87-4257-A4F9-B512CDB51EFC}</string>
+			<ProtectedString name="Source"><![CDATA[--[[
+	 __        __  _______  __    __  __   __  ________
+    /  \      / / / _____/  \ \  / /  \ \  \ \ \  _____\
+   / /\ \    / / / /____     \ \/ /    \ \  \ \ \ \_____
+  / /  \ \  / / / _____/     / /\ \     \ \  \ \ \_____ \
+ / /    \ \/ / / /____      / /  \ \     \ \__\ \  ____\ \
+/_/      \__/ /______/     /_/    \_\     \______\ \______\
+
+Nexus Admin, by TheNexusAvenger
+
+
+
+Date: June 7 2018
+--]]
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------              Configuration             --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+CommandOverrideLevels = {
+	pban = nil,
+	unpban = nil,
+	pbans = nil,
+}
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------             Optimizations              --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local gsub,sub,match,len,lower = string.gsub,string.sub,string.match,string.len,string.lower
+local huge,random,pi = math.huge,math.random,math.pi
+local insert = table.insert
+local CFramenew,CFrameAngles = CFrame.new,CFrame.Angles
+local Vector3new = Vector3.new
+local Instancenew = Instance.new
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------         Environment Variables          --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local API = _G.NexusAdmin_GetServerAPI()
+local AdminItemContainer = API.AdminItemContainer
+local Config = API.GetConfig()
+
+local CommandPrefix = Config.CommandPrefix or ":"
+local BuildUtilityLevel = Config.BuildUtilityLevel or 1
+local BasicCommandsLevel = Config.BasicCommandsLevel or 1
+local UsefulFunCommandsLevel = Config.UsefulFunCommandsLevel or 2
+local FunCommandsLevel = Config.FunCommandsLevel or 3
+local PersistentCommandsLevel = Config.PersistentCommandsLevel or 4
+local CommandLevelOverrides = Config.CommandLevelOverrides or {}
+
+local function GetNeededAdminLevel(BaseValue,CommandValue)
+	local Level = (CommandLevelOverrides["PersistentCommands"] or {})[CommandValue]
+	return CommandOverrideLevels[CommandValue] or Level or BaseValue
+end
+
+local SingleUseLocalScript = script:WaitForChild("SingleUseLocalScript")
+local function GiveSingleUseLocalScript(Player,Function)
+	local Script = SingleUseLocalScript:Clone()
+	Script.Parent = Player:WaitForChild("PlayerGui")
+	Script:WaitForChild("FunctionToDo").Value = Function
+	Script.Disabled = false
+end
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------           Persistent Commands          --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local PercistentBanKey = "PercistentBans"
+
+local NexusDevelopmentPersistenceDataStore
+local PersistentBanList = {}
+local ClientViewableBanList = {}
+local PersistentCommandsLoaded = false
+local function LoadPersistentBans()
+	if PersistentCommandsLoaded then return end
+	PersistentCommandsLoaded = true
+	
+	local Worked,Return = pcall(function() return game:GetService("DataStoreService"):GetDataStore("NexusAdmin_Persistence") end)
+	if Worked and Return then
+		NexusDevelopmentPersistenceDataStore = Return
+		
+		local GetPersistentBanList = Instance.new("RemoteFunction")
+		GetPersistentBanList.Name = "NexusAdmin_GetPersistentBanList"
+		GetPersistentBanList.Parent = game.ReplicatedStorage
+		
+		local GetPersistentBansAdminLevel = GetNeededAdminLevel(PersistentCommandsLevel,"pbans")
+		function GetPersistentBanList.OnServerInvoke(Player)
+			if API.GetAdminLevel(Player) >= GetPersistentBansAdminLevel then
+				return ClientViewableBanList
+			end
+		end
+		
+		
+		
+		local function BanPlayerIfOnList(Player)
+			local UserId = tostring(Player.UserId)
+			local BanStatus = PersistentBanList[UserId]
+			if BanStatus ~= nil then
+				Player:Kick(BanStatus ~= true and BanStatus)
+			end
+		end
+		
+		local UsernameCache = {}
+		local function UserIdToUsername(UserId)
+			if not UsernameCache[UserId] then
+				local Worked,Return = pcall(function() return game.Players:GetNameFromUserIdAsync(UserId) end)
+				if Worked and Return then
+					UsernameCache[UserId] = Return
+				else
+					UsernameCache[UserId] = "FETCH FAILED"
+				end
+			end
+			
+			return UsernameCache[UserId]
+		end
+		
+		
+		
+		NexusDevelopmentPersistenceDataStore:OnUpdate(PercistentBanKey,function(NewValue)
+			PersistentBanList = NewValue or {}
+			
+			for _,Player in pairs(game.Players:GetPlayers()) do
+				BanPlayerIfOnList(Player)
+			end
+			
+			local NewClientList = {}
+			ClientViewableBanList = NewClientList
+			
+			for UserId,Reason in pairs(PersistentBanList) do
+				UserId = tonumber(UserId)
+				spawn(function()
+					local Username = UserIdToUsername(UserId)
+					if Reason == true then
+						table.insert(NewClientList,Username.." ("..tostring(UserId)..")")
+					else
+						table.insert(NewClientList,Username.." ("..tostring(UserId)..") - "..tostring(Reason))
+					end
+				end)
+			end
+		end)
+		
+		game.Players.PlayerAdded:Connect(BanPlayerIfOnList)
+		for _,Player in pairs(game.Players:GetPlayers()) do
+			BanPlayerIfOnList(Player)
+		end
+	else
+		warn("Failed to load persistence DataStore because "..tostring(Return))
+	end
+end
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "pban",
+	AdminLevel = GetNeededAdminLevel(PersistentCommandsLevel,"pban"),
+	ExtraInfo = "Permanently bans a set of players by their user id or username (use user if if the name is a number) with an optional ban message.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Persistent Commands",
+	OnCommandLoad = function()
+		spawn(LoadPersistentBans)
+	end,
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Arguments = ArgumentParser:GetRemainder()
+		
+		if not NexusDevelopmentPersistenceDataStore then
+			API.DisplayHint(Player,"Persistent banning failed to load.") return 
+		end
+		
+		local SeperationPoint = string.find(Arguments,"%s") or string.len(Arguments) + 1
+		local Start,End = string.sub(Arguments,1,SeperationPoint-1),string.sub(Arguments,SeperationPoint+1)
+		if End == "" then
+			End = true
+		end
+		
+		local NamesAndIds = {}
+		string.gsub(Start,"([%a%w%_]+)",function(Input)
+			if Input ~= Player.Name and Input ~= tostring(Player.UserId) then
+				table.insert(NamesAndIds,tonumber(Input) or Input)
+			end
+		end)
+		
+		spawn(function()
+			for Id,Name in pairs(NamesAndIds) do
+				if type(Name) == "string" then
+					local Worked,Return = pcall(function() return game.Players:GetUserIdFromNameAsync(Name) end)
+					
+					if Worked and Return then
+						NamesAndIds[Id] = Return
+					else
+						NamesAndIds[Id] = nil
+					end
+				end
+			end
+			
+			local Worked,Return = pcall(function()
+				NexusDevelopmentPersistenceDataStore:UpdateAsync(PercistentBanKey,function(ExistingValue)
+					ExistingValue = ExistingValue or {}
+					
+					for _,UserId in pairs(NamesAndIds) do
+						ExistingValue[tostring(UserId)] = End
+					end
+					return ExistingValue
+				end)
+			end)
+			
+			if not Worked then
+				print("Failed to set permanent bans becasue "..tostring(Return))
+			end
+		end)
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unpban",
+	AdminLevel = GetNeededAdminLevel(PersistentCommandsLevel,"unpban"),
+	ExtraInfo = "Unbans a set of players by their user id or username (use user if if the name is a number).",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Persistent Commands",
+	OnCommandLoad = function()
+		spawn(LoadPersistentBans)
+	end,
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		if not NexusDevelopmentPersistenceDataStore then
+			API.DisplayHint(Player,"Persistent banning failed to load.") return 
+		end
+		local Arguments = ArgumentParser:GetRemainder()
+		
+		local NamesAndIds = {}
+		string.gsub(Arguments,"([%a%w%_]+)",function(Input)
+			if Input ~= Player.Name and Input ~= tostring(Player.UserId) then
+				table.insert(NamesAndIds,tonumber(Input) or Input)
+			end
+		end)
+		
+		spawn(function()
+			for Id,Name in pairs(NamesAndIds) do
+				if type(Name) == "string" then
+					local Worked,Return = pcall(function() return game.Players:GetUserIdFromNameAsync(Name) end)
+					
+					if Worked and Return then
+						NamesAndIds[Id] = Return
+					else
+						NamesAndIds[Id] = nil
+					end
+				end
+			end
+			
+			local Worked,Return = pcall(function()
+				NexusDevelopmentPersistenceDataStore:UpdateAsync(PercistentBanKey,function(ExistingValue)
+					ExistingValue = ExistingValue or {}
+					
+					for _,UserId in pairs(NamesAndIds) do
+						ExistingValue[tostring(UserId)] = nil
+					end
+					return ExistingValue
+				end)
+			end)
+			
+			if not Worked then
+				print("Failed to set permanent bans becasue "..tostring(Return))
+			end
+		end)
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "pbans",
+	AdminLevel = GetNeededAdminLevel(PersistentCommandsLevel,"pbans"),
+	ExtraInfo = "Displays a list of all permanent bans.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Persistent Commands",
+	OnCommandLoad = function()
+		spawn(LoadPersistentBans)
+	end,
+	OnCommandInvoked = function(Player,BaseMessage,Arguments)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		if not NexusDevelopmentPersistenceDataStore then
+			API.DisplayHint(Player,"Persistent banning failed to load.") return 
+		end
+		
+		GiveSingleUseLocalScript(Player,"PersistentBansList")
+	end,
+})
+
+return true]]></ProtectedString>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+		<Item class="LocalScript" referent="RBXBC75154450AB48DC805E436441ED9D98">
+			<Properties>
+				<bool name="Disabled">true</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">SingleUseLocalScript</string>
+				<string name="ScriptGuid">{D4F43751-6E85-4D79-B9A9-7BCF0FB80078}</string>
+				<ProtectedString name="Source"><![CDATA[local FunctionToDo = script:WaitForChild("FunctionToDo")
+while FunctionToDo.Value == "" do wait() end 
+local FunctionToDoValue = FunctionToDo.Value
+
+local API = _G.NexusAdmin_GetLocalAPI()
+
+local LineHeightRelative = 0.06
+local PrivateMessageRelativeSize = 0.3
+
+
+
+local function Create6pxNineSlice()
+	local Frame = Instance.new("ImageLabel")
+	Frame.BackgroundTransparency = 1
+	Frame.Image = "rbxassetid://475155538"
+	Frame.ScaleType = "Slice"
+	Frame.SliceCenter = Rect.new(6,6,44,44)
+	
+	return Frame
+end
+
+local ButtonClass = require(script:WaitForChild("ButtonClass"))
+local function CreateButton(ColorName)
+	local Button = ButtonClass.new()
+	Button.BorderSizeScale = 0.05
+	if ColorName == "Blue" then
+		Button.BackgroundColor3 = Color3.new(0,170/255,255/255)
+		Button.BorderColor3 = Color3.new(0,140/255,225/255)
+	elseif ColorName == "Red" then
+		Button.BackgroundColor3 = Color3.new(170/255,0,0)
+		Button.BorderColor3 = Color3.new(140/255,0,0)
+	elseif ColorName == "Green" then
+		Button.BackgroundColor3 = Color3.new(0,170/255,0)
+		Button.BorderColor3 = Color3.new(0,140/255,0)
+	end
+	Button.TextScaled = true
+	Button.TextStrokeTransparency = 0
+	Button.Font = "SourceSansBold"
+	Button.TextColor3 = Color3.new(1,1,1)
+	Button.TextStrokeColor3 = Color3.new(0,0,0)
+	Button.TextPadding = UDim.new(0.05,0)
+	return Button
+end
+
+local function CreateSearchableMenu(TopName,GetInfoFunction,CloseFunction)
+	local Search = ""
+	local Scroll
+	local LineAdorn,MainLineAdorn,SearchBar,SearchButton
+	
+	local Instancenew = Instance.new
+	local UDim2new,Color3new = UDim2.new,Color3.new
+	local WhiteColor3 = Color3.new(1,1,1)
+	local find,lower = string.find,string.lower
+	
+	local Lines = {}
+	local function RefreshList()
+		local CurrentPos = 2
+		
+		for _,Frame in pairs(Lines) do
+			Frame:Destroy()
+		end
+		
+		local MaxAspectRatio = 1
+		local BaseAspectRatio = (Scroll.AbsoluteSize.X/(Scroll.AbsoluteSize.Y * LineHeightRelative))
+		local function CreateLine(Text)
+			local TextAspectRatio = (API.GetTextBounds(Text,"SourceSans",50,false,UDim2.new(1,0,1,0),false).X/50)/BaseAspectRatio
+			if MaxAspectRatio < TextAspectRatio then
+				MaxAspectRatio = TextAspectRatio
+			end
+			
+			local TextLabel = Instancenew("TextLabel")
+			TextLabel.BackgroundTransparency = 1
+			TextLabel.Position = UDim2.new(0,0,CurrentPos,0)
+			TextLabel.Size = UDim2new(1,0,1,0)
+			TextLabel.Font = "SourceSans"
+			TextLabel.TextScaled = true
+			TextLabel.TextColor3 = WhiteColor3
+			TextLabel.TextXAlignment = "Left"
+			TextLabel.TextWrapped = true
+			TextLabel.Text = Text
+			TextLabel.Parent = LineAdorn
+			table.insert(Lines,TextLabel)
+			
+			CurrentPos = CurrentPos + 1
+		end
+		
+		for _,Log in pairs(GetInfoFunction()) do
+			if find(lower(Log),lower(Search)) then
+				CreateLine(Log)
+			end
+		end
+		
+		LineAdorn.Size = UDim2.new(1,0,math.min(LineHeightRelative,1/CurrentPos),0)
+		Scroll.CanvasSize = UDim2new(MaxAspectRatio,0,CurrentPos * LineHeightRelative,0)
+		MainLineAdorn.Size = UDim2.new(1/MaxAspectRatio,0,1,0)
+	end
+	
+	API.CreateGenericListBox(TopName,
+		function(ScrollFrame) 
+			Scroll = ScrollFrame
+			local LineSize = Scroll.AbsoluteSize
+			local LineSizeX,LineSizeY = LineSize.X,LineSize.Y * LineHeightRelative * 2
+			
+			if not LineAdorn then
+				LineAdorn = Instancenew("Frame")
+				LineAdorn.BackgroundTransparency = 1
+				LineAdorn.Size = UDim2new(1,0,1,0)
+				LineAdorn.Parent = Scroll
+			end
+			
+			if not MainLineAdorn then
+				MainLineAdorn = Instancenew("Frame")
+				MainLineAdorn.BackgroundTransparency = 1
+				MainLineAdorn.Size = UDim2new(1,0,1,0)
+				MainLineAdorn.Parent = LineAdorn
+			end
+			
+			if not SearchBar then
+				SearchBar = Instancenew("TextBox")
+				SearchBar.BackgroundTransparency = 0.5
+				SearchBar.Size = UDim2new(1 - ((LineSizeY * 1.2)/LineSizeX),0,1.6,0)
+				SearchBar.Position = UDim2new((LineSizeY * 0.1)/LineSizeX,0,0.2,0)
+				SearchBar.BackgroundColor3 = Color3new(0,0,0)
+				SearchBar.BorderSizePixel = 0
+				SearchBar.Text = ""
+				SearchBar.Font = "SourceSans"
+				SearchBar.FontSize = "Size18"
+				SearchBar.TextColor3 = WhiteColor3
+				SearchBar.ClearTextOnFocus = false
+				SearchBar.ClipsDescendants = true
+				SearchBar.TextXAlignment = "Left"
+				SearchBar.Parent = MainLineAdorn
+			end
+			
+			if not SearchButton then
+				SearchButton = CreateButton("Blue")
+				SearchButton.Text = "S"
+				SearchButton.Size = UDim2.new((LineSizeY * 0.8)/LineSizeX,0,1.6,0)
+				SearchButton.Position = UDim2.new(1 - ((LineSizeY * 0.9)/LineSizeX),0,0.2,0)
+				SearchButton.Parent = MainLineAdorn
+				
+				local DB = true
+				SearchButton.MouseButton1Down:Connect(function()
+					if DB == true then
+						DB = false
+						Search = SearchBar.Text
+						RefreshList()
+						wait()
+						DB = true
+					end
+				end)
+			end
+			RefreshList()
+			
+	end,CloseFunction)
+end
+
+
+
+if FunctionToDoValue == "PersistentBansList" then
+	local Closed = false
+	local GetPersistentBanList = game.ReplicatedStorage:WaitForChild("NexusAdmin_GetPersistentBanList")
+	CreateSearchableMenu("Permanent Bans",function() 
+		local PersistentBans = GetPersistentBanList:InvokeServer() 
+		table.sort(PersistentBans,function(a,b) return a < b end)
+		return PersistentBans
+	end,function() Closed = true end)
+	
+	while not Closed do wait() end
+	wait(1)
+end
+wait()
+script:Destroy()]]></ProtectedString>
+				<BinaryString name="Tags"></BinaryString>
+			</Properties>
+			<Item class="StringValue" referent="RBX74361F41FCE54409BF23F6A95EA14CF1">
+				<Properties>
+					<string name="Name">FunctionToDo</string>
+					<BinaryString name="Tags"></BinaryString>
+					<string name="Value"></string>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX786EBAE827834AB4915FA2CFCC797A76">
+				<Properties>
+					<Content name="LinkedSource"><null></null></Content>
+					<string name="Name">ButtonClass</string>
+					<string name="ScriptGuid">{4CEADED5-9C28-435B-A7BC-D64C8A810E62}</string>
+					<ProtectedString name="Source"><![CDATA[--[[
+Removed API:
+Button.ButtonStyle
+Button.Modal
+Button.Transparency
+Button.BorderColor
+Button.BackgroundColor
+Button.MouseButton1Click
+Button.MouseButton2Click
+
+Added API:
+Button.BorderTransparency (Number)
+Button.BorderSizeScale (Number)
+Button.ForceHighlight (Bool)
+Button.TextPadding (UDim)
+Button.HighlightBrightness (Number)
+Button.ControllerIconSizeRelative (0-1)
+Button.ControllerIconPosition ("Left","Right","FarLeft","FarRight")
+Button.ControllerInput	(Enum.KeyCode.ButtonX,Enum.Keycode.ButtonA,...)
+Button.ControllerIconType ("ButtonX","ButtonA",...)
+Button.PhysicalButton [Read Only]
+--]]
+
+local ClassName = "CustomButton"
+
+
+
+
+
+
+
+
+
+
+local ButtonClass = {}
+
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
+local GamePadIcons = require(script:WaitForChild("GamePadIcons"))
+
+local function Create6pxNineSlice()
+	local Image = Instance.new("ImageLabel")
+	Image.BackgroundTransparency = 1
+	Image.Image = "rbxassetid://475155538"
+	Image.ScaleType = "Slice"
+	Image.SliceCenter = Rect.new(6,6,44,44)
+	return Image
+end
+
+local TextLabelProperties = {
+	Font = true,
+	Text = true,
+	TextBounds = true,
+	TextColor3 = true,
+	TextFits = true,
+	TextScaled = true,
+	TextSize = true,
+	TextStrokeColor3 = true,
+	TextStrokeTransparency = true,
+	TextTransparency = true,
+	TextWrapped = true,
+	TextXAlignment = true,
+	TextYAlignment = true,
+	FontSize = true,
+	TextColor = true,
+	TextWrap = true,
+}
+
+local Functions = {
+	TweenPosition = true,
+	TweenSize = true,
+	TweenSizeAndPosition = true,
+	ClearAllChildren = true,
+	Clone = true,
+	Destroy = true,
+	FindFirstChild = true,
+	FindFirstChildOfClass = true,
+	GetChildren = true,
+	GetDebugId = true,
+	GetFullName = true,
+	IsA = true,
+	IsAncestorOf = true,
+	IsDescendantOf = true,
+	WaitForChild = true,
+	Remove = true,
+	children = true,
+	clone = true,
+	destroy = true,
+	findFirstChild = true,
+	getChildren = true,
+	isA = true,
+	isDescendantOf = true,
+	remove = true,
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local MobileButtons = {}
+if UserInputService.TouchEnabled then
+	local function PointInFrame(X,Y)
+		for Frame,_ in pairs(MobileButtons) do
+			local Size,Position = Frame.AbsoluteSize,Frame.AbsolutePosition
+			local SizeX,SizeY = Size.X,Size.Y
+			local PosX,PosY = Position.X,Position.Y
+			
+			if SizeX < 0 then
+				SizeX = -SizeX
+				PosX = PosX - SizeX
+			end
+			if SizeY < 0 then
+				SizeY = -SizeY
+				PosY = PosY - SizeY
+			end
+			
+			if PosX < X and PosX + SizeX > X and PosY < Y and PosY + SizeY > Y then
+				return Frame
+			end
+		end
+	end
+
+	UserInputService.InputBegan:Connect(function(Input)
+		if Input.UserInputType ==  Enum.UserInputType.Touch then
+			local Position = Input.Position
+			local Frame = PointInFrame(Position.X,Position.Y) 
+			
+			if Frame then
+				MobileButtons[Frame][1]()
+			end
+		end
+	end)
+	
+	UserInputService.InputEnded:Connect(function(Input)
+		if Input.UserInputType ==  Enum.UserInputType.Touch then
+			local Position = Input.Position
+			local Frame = PointInFrame(Position.X,Position.Y) 
+			
+			if Frame then
+				MobileButtons[Frame][2]()
+			end
+		end
+	end)
+end
+
+local function CreateDarkGamepadIcon(Id)
+	return GamePadIcons:GetImageLabel(Id,"Dark")
+end
+
+local WindowFocused = true
+local function CanAcceptInput()
+	return (WindowFocused and not UserInputService:GetFocusedTextBox() and not GuiService.MenuIsOpen)
+end
+
+UserInputService.WindowFocusReleased:Connect(function()
+	WindowFocused = false
+end)
+
+UserInputService.WindowFocused:Connect(function()
+	WindowFocused = true
+end)
+
+local function CreateButton(ButtonClone,OldBackgroundColor3,OldBorderColor3,OldAutoButtonColor,OldForceHighlight,OldBorderSizePixel,OldBorderSizeScale,OldHighlightBrightness,OldTextPadding,OldControllerIconSizeRelative,OldControllerIconPosition,OldControllerInput,OldControllerIconType)
+	local BackgroundColor3,BorderColor3 = OldBackgroundColor3 or Color3.new(1,1,1),OldBorderColor3 or Color3.new(27/255,42/255,53/255)
+	local AutoButtonColor,ForceHighlight = OldAutoButtonColor or true,OldForceHighlight or false
+	local MouseInFrame = false
+	local ButtonDown = false
+	local BorderSizePixel,BorderSizeScale = OldBorderSizePixel,OldBorderSizeScale
+	local HighlightBrightness = OldHighlightBrightness or 30
+	local TextPadding = OldTextPadding or UDim.new(0,1)
+	local ControllerIconSizeRelative,ControllerIconPosition = OldControllerIconSizeRelative or 0.9,OldControllerIconPosition or "Right"
+	local ControllerInput,ControllerIconType = OldControllerInput,OldControllerIconType
+	
+	local OuterNineSlice,InnerNineSlice,InnerText
+	if ButtonClone then
+		OuterNineSlice = ButtonClone
+		InnerNineSlice = ButtonClone:GetChildren()[1]
+		InnerText = InnerNineSlice:GetChildren()[1]
+		
+		local CurrentButton = OuterNineSlice:FindFirstChild("ControllerIcon")
+		if CurrentButton then CurrentButton:Destroy() end
+	else
+		OuterNineSlice = Create6pxNineSlice()
+		
+		InnerNineSlice = Create6pxNineSlice()
+		InnerNineSlice.Size = UDim2.new(1,-2,1,-2)
+		InnerNineSlice.Position = UDim2.new(0.5,0,0.5,0)
+		InnerNineSlice.AnchorPoint = Vector2.new(0.5,0.5)
+		InnerNineSlice.Parent = OuterNineSlice
+		
+		InnerText = Instance.new("TextLabel")
+		InnerText.BackgroundTransparency = 1
+		InnerText.Size = UDim2.new(1,0,1,0)
+		InnerText.Parent = InnerNineSlice
+	end
+	
+	local function Brighten(Color)
+		return Color3.new(Color.r + HighlightBrightness/255,Color.g + HighlightBrightness/255,Color.b + HighlightBrightness/255)
+	end
+	
+	local function UpdateColors()
+		if (ButtonDown == false and AutoButtonColor == true and MouseInFrame == true) or ForceHighlight == true then
+			OuterNineSlice.ImageColor3 = Brighten(BorderColor3)
+			InnerNineSlice.ImageColor3 = Brighten(BackgroundColor3)
+		else
+			OuterNineSlice.ImageColor3 = BorderColor3
+			InnerNineSlice.ImageColor3 = BackgroundColor3
+		end
+	end
+	
+	local UpdateBorderEvent
+	local function UpdateBorderSizing()
+		if UpdateBorderEvent then UpdateBorderEvent:Disconnect() end
+		if BorderSizePixel then
+			InnerNineSlice.Size = UDim2.new(1,-BorderSizePixel * 2,1,-BorderSizePixel * 2)
+		elseif BorderSizeScale then
+			local UDim2new = UDim2.new
+			UpdateBorderEvent = RunService.RenderStepped:Connect(function()
+				local BorderSize = OuterNineSlice.AbsoluteSize.Y * BorderSizeScale
+				local WidthScaleX = BorderSize/OuterNineSlice.AbsoluteSize.X
+				InnerNineSlice.Size = UDim2new(1 - (WidthScaleX * 2),0,1 - (BorderSizeScale * 2),0)
+			end)
+		end
+	end
+	
+	local CurrentIcon,UpdateControllerButtonEvent
+	local function UpdateControllerIcon()
+		if CurrentIcon then CurrentIcon:Destroy() end
+		if UpdateControllerButtonEvent then UpdateControllerButtonEvent:Disconnect() end
+		
+		if UserInputService:GetGamepadConnected(Enum.UserInputType.Gamepad1) and ControllerIconType then
+			CurrentIcon = CreateDarkGamepadIcon(ControllerIconType)
+			CurrentIcon.SizeConstraint = "RelativeYY"
+			CurrentIcon.Name = "ControllerIcon"
+			if ControllerIconType == "ButtonR1" or ControllerIconType == "ButtonL1" then
+				CurrentIcon.Size = UDim2.new(ControllerIconSizeRelative * 2,0,ControllerIconSizeRelative,0)
+			else
+				CurrentIcon.Size = UDim2.new(ControllerIconSizeRelative,0,ControllerIconSizeRelative,0)
+			end
+			CurrentIcon.Parent = OuterNineSlice
+			
+			local UDim2new = UDim2.new
+			if ControllerIconPosition == "Left" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					CurrentIcon.Position = UDim2new((SizeY * (1 - ControllerIconSizeRelative)/2)/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			elseif ControllerIconPosition == "FarRight" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					CurrentIcon.Position = UDim2new(1 + (SizeY * (1 - ControllerIconSizeRelative)/2)/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			elseif ControllerIconPosition == "FarLeft" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					local ButtonWidthX = CurrentIcon.AbsoluteSize.X
+					CurrentIcon.Position = UDim2new(-(ButtonWidthX / (ControllerIconSizeRelative/2 + 0.5))/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			elseif ControllerIconPosition == "Right" then
+				UpdateControllerButtonEvent = RunService.RenderStepped:Connect(function()
+					local OuterNineSliceSize = OuterNineSlice.AbsoluteSize
+					local SizeX,SizeY = OuterNineSliceSize.X,OuterNineSliceSize.Y
+					local ButtonWidthX = CurrentIcon.AbsoluteSize.X
+					CurrentIcon.Position = UDim2new(1-(ButtonWidthX / (ControllerIconSizeRelative/2 + 0.5))/SizeX,0,(1 - ControllerIconSizeRelative)/2,0)
+				end)
+			end
+		end
+	end
+	
+	local ChangedEvent = Instance.new("BindableEvent")
+	local MouseButton1DownEvent = Instance.new("BindableEvent")
+	local MouseButton1UpEvent = Instance.new("BindableEvent")
+	local MouseButton2DownEvent = Instance.new("BindableEvent")
+	local MouseButton2UpEvent = Instance.new("BindableEvent")
+	
+	local function Button1DownFunction()
+		ButtonDown = true
+		MouseButton1DownEvent:Fire()
+		UpdateColors()
+	end
+	
+	local function Button1UpFunction()
+		ButtonDown = false
+		MouseButton1UpEvent:Fire()
+		UpdateColors()
+	end
+	
+	MobileButtons[OuterNineSlice] = {Button1DownFunction,Button1UpFunction}
+	
+	local FrameEnterEvent = OuterNineSlice.MouseEnter:Connect(function()
+		MouseInFrame = true
+		UpdateColors()
+	end)
+	
+	local FrameLeaveEvent = OuterNineSlice.MouseLeave:Connect(function()
+		MouseInFrame = false
+		UpdateColors()
+	end)
+	
+	local InputEvent1 = OuterNineSlice.InputBegan:Connect(function(Input)
+		if ((CanAcceptInput() and (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.KeyCode == Enum.KeyCode.ButtonA))) then
+			ButtonDown = true
+			MouseButton1DownEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local InputEvent2 = UserInputService.InputBegan:Connect(function(Input)
+		if CanAcceptInput() and (Input.KeyCode == ControllerInput) or (Input.KeyCode == Enum.KeyCode.ButtonA and GuiService.SelectedObject == OuterNineSlice) then
+			ButtonDown = true
+			MouseButton1DownEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local InputEvent3 = UserInputService.InputEnded:Connect(function(Input)
+		if ButtonDown == true and ((Input.KeyCode == ControllerInput) or (Input.KeyCode == Enum.KeyCode.ButtonA and GuiService.SelectedObject == OuterNineSlice) or Input.UserInputType == Enum.UserInputType.MouseButton1) then
+			ButtonDown = false
+			MouseButton1UpEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local Button2Down = false
+	local InputEvent4 = OuterNineSlice.InputBegan:Connect(function(Input)
+		if CanAcceptInput() and Input.UserInputType == Enum.UserInputType.MouseButton2 then
+			Button2Down = true
+			MouseButton2DownEvent:Fire()
+		end
+	end)
+	
+	local InputEvent5 = UserInputService.InputEnded:Connect(function(Input)
+		if Button2Down == true and Input.UserInputType == Enum.UserInputType.MouseButton2 then
+			Button2Down = false
+			MouseButton2UpEvent:Fire()
+			UpdateColors()
+		end
+	end)
+	
+	local GamepadConnectedEvent = UserInputService.GamepadConnected:Connect(UpdateControllerIcon)
+	local GamepadDisonnectedEvent = UserInputService.GamepadDisconnected:Connect(UpdateControllerIcon)
+	
+	local IndexFunctions = {}
+	function IndexFunctions.__index(Table,Index)
+		--ROBLOX API
+		if Index == "IsA" then
+			return function (Self,Class)
+				return Class == ClassName
+			end
+		elseif Index == "Clone" then
+			return function ()
+				return CreateButton(OuterNineSlice:Clone(),BackgroundColor3,BorderColor3,AutoButtonColor,ForceHighlight,BorderSizePixel,BorderSizeScale,HighlightBrightness,TextPadding,ControllerIconSizeRelative,ControllerIconPosition,ControllerInput,ControllerIconType)
+			end
+		elseif Index == "Destroy" then
+			return function ()
+				if InputEvent1 then InputEvent1:Disconnect() end
+				if InputEvent2 then InputEvent2:Disconnect() end
+				if InputEvent3 then InputEvent3:Disconnect() end
+				if InputEvent4 then InputEvent4:Disconnect() end
+				if InputEvent5 then InputEvent5:Disconnect() end
+				if UpdateBorderEvent then UpdateBorderEvent:Disconnect() end
+				if UpdateControllerButtonEvent then UpdateControllerButtonEvent:Disconnect() end
+				if GamepadConnectedEvent then GamepadConnectedEvent:Disconnect() end
+				if GamepadDisonnectedEvent then GamepadDisonnectedEvent:Disconnect() end
+				MobileButtons[OuterNineSlice] = nil
+				
+				OuterNineSlice:Destroy()
+			end
+		elseif Index == "ClassName" or Index == "className" then
+			return ClassName
+		elseif Index == "AutoButtonColor" then
+			return AutoButtonColor
+		elseif Index == "BackgroundColor3" then
+			return BackgroundColor3
+		elseif Index == "BorderColor3" then
+			return BorderColor3
+		elseif Index == "BackgroundTransparency" then
+			return OuterNineSlice.ImageTransparency
+		elseif Index == "BorderTransparency" then
+			return InnerNineSlice.ImageTransparency
+		elseif Index == "BorderSizePixel" then
+			return BorderSizePixel or 0
+			
+			
+		--CUSTOM API
+		elseif Index == "ForceHighlight" then
+			return ForceHighlight
+		elseif Index == "BorderSizeScale" then
+			return BorderSizeScale
+		elseif Index == "TextPadding" then
+			return TextPadding
+		elseif Index == "HighlightBrightness" then
+			return HighlightBrightness
+		elseif Index == "ControllerIconSizeRelative" then
+			return ControllerIconSizeRelative
+		elseif Index == "ControllerIconPosition" then
+			return ControllerIconPosition
+		elseif Index == "ControllerInput" then
+			return ControllerInput
+		elseif Index == "ControllerIconType" then
+			return ControllerIconType
+		elseif Index == "PhysicalButton" then
+			return OuterNineSlice
+			
+		--EVENTS
+		elseif Index == "Changed" then
+			return ChangedEvent.Event
+		elseif Index == "MouseButton1Down" then
+			return MouseButton1DownEvent.Event
+		elseif Index == "MouseButton1Up" then
+			return MouseButton1UpEvent.Event
+		elseif Index == "MouseButton2Down" then
+			return MouseButton2DownEvent.Event
+		elseif Index == "MouseButton2Up" then
+			return MouseButton2UpEvent.Event
+		
+		
+		--GENERIC VALUE
+		elseif TextLabelProperties[Index] then
+			return InnerText[Index]
+		elseif Functions[Index] then
+			return function(...)
+				local InputTable = {...}
+				if InputTable[1] == Table then
+					InputTable[1] = OuterNineSlice
+				end
+				return OuterNineSlice[Index](unpack(InputTable))
+			end
+		else
+			return OuterNineSlice[Index]
+		end
+	end
+	
+	function IndexFunctions.__newindex(Table,Index,Value)
+		--ROBLOX API
+		if Index == "AutoButtonColor" then
+			AutoButtonColor = Value
+			UpdateColors()
+		elseif Index == "Active" then
+			OuterNineSlice.Active = Value
+			InnerNineSlice.Active = Value
+			InnerText.Active = Value
+		elseif Index == "BackgroundColor3" then
+			BackgroundColor3 = Value
+			UpdateColors()
+		elseif Index == "BorderColor3" then
+			BorderColor3 = Value
+			UpdateColors()
+		elseif Index == "BackgroundTransparency" then
+			OuterNineSlice.ImageTransparency = Value
+		elseif Index == "BorderTransparency" then
+			InnerNineSlice.ImageTransparency = Value
+		elseif Index == "BorderSizePixel" then
+			BorderSizePixel = Value
+			BorderSizeScale = nil
+			UpdateBorderSizing()
+		elseif Index == "ZIndex" then
+			OuterNineSlice.ZIndex = Value
+			InnerNineSlice.ZIndex = Value
+			InnerText.ZIndex = Value
+			
+		--CUSTOM API
+		elseif Index == "ForceHighlight" then
+			ForceHighlight = Value
+			UpdateColors()
+		elseif Index == "BorderSizeScale" then
+			BorderSizePixel = nil
+			BorderSizeScale = Value
+			UpdateBorderSizing()
+		elseif Index == "TextPadding" then
+			TextPadding = Value
+			local Scale,Offset = Value.Scale,Value.Offset
+			InnerText.Size = UDim2.new(1 - (Scale * 2),-Offset * 2,1 - (Scale * 2),-Offset * 2)
+			InnerText.Position = UDim2.new(Scale,Offset,Scale,Offset)
+		elseif Index == "HighlightBrightness" then
+			HighlightBrightness = Value
+			UpdateColors()
+		elseif Index == "ControllerIconSizeRelative" then
+			ControllerIconSizeRelative = Value
+			UpdateControllerIcon()
+		elseif Index == "ControllerIconPosition" then
+			ControllerIconPosition = Value
+			UpdateControllerIcon()
+		elseif Index == "ControllerInput" then
+			ControllerInput = Value
+			UpdateControllerIcon()
+		elseif Index == "ControllerIconType" then
+			ControllerIconType = Value
+			UpdateControllerIcon()
+			
+		--GENERIC VALUE
+		elseif TextLabelProperties[Index] then
+			InnerText[Index] = Value
+		else
+			OuterNineSlice[Index] = Value
+		end
+		ChangedEvent:Fire(Index)
+	end
+	UpdateColors()
+	UpdateBorderSizing()
+	UpdateControllerIcon()
+	
+	return setmetatable({},IndexFunctions)
+end
+
+
+
+function ButtonClass.new()
+	return CreateButton()
+end
+
+return ButtonClass
+
+]]></ProtectedString>
+					<BinaryString name="Tags"></BinaryString>
+				</Properties>
+				<Item class="ModuleScript" referent="RBX95302F40B66D4404AE3B220F9C2CFA8B">
+					<Properties>
+						<Content name="LinkedSource"><null></null></Content>
+						<string name="Name">GamePadIcons</string>
+						<string name="ScriptGuid">{47EDDBD0-325D-4372-A2D2-642E2014A6DF}</string>
+						<ProtectedString name="Source"><![CDATA[local ControllerImageLibrary = {}
+
+local spritesheets = {}
+for _, platform in pairs(script.Spritesheets:GetChildren()) do
+	spritesheets[platform.Name] = {}
+	for _, style in pairs(platform:GetChildren()) do
+		spritesheets[platform.Name][style.Name] = require(style).new()
+	end
+end
+
+local function getImageInstance(instanceType, index, style)
+	local platform = "XboxOne"
+	if type(index)== "userdata" then
+		index = string.sub(tostring(index), 14)
+	end
+	local sheet = spritesheets[platform][style]
+	if not sheet then
+		warn("Could not find style: " .. style)
+		return
+	end
+	local element = sheet:GetSprite(instanceType, index)
+	return element
+end
+
+function ControllerImageLibrary:GetImageLabel(index, style, platform)
+	return getImageInstance("ImageLabel", index, style, platform)
+end
+
+function ControllerImageLibrary:GetImageButton(index, style, platform)
+	return getImageInstance("ImageButton", index, style, platform)
+end
+
+return ControllerImageLibrary
+]]></ProtectedString>
+						<BinaryString name="Tags"></BinaryString>
+					</Properties>
+					<Item class="ModuleScript" referent="RBX6942646094A547AEB2D7F01F4FB2684B">
+						<Properties>
+							<Content name="LinkedSource"><null></null></Content>
+							<string name="Name">Spritesheet</string>
+							<string name="ScriptGuid">{D2B99381-8A4A-45A3-A79B-5B442FBDF690}</string>
+							<ProtectedString name="Source"><![CDATA[local Spritesheet = {}
+Spritesheet.__index = Spritesheet
+
+function Spritesheet.new(texture)
+	local newSpritesheet = {}
+	setmetatable(newSpritesheet, Spritesheet)
+	
+	newSpritesheet.Texture = texture
+	newSpritesheet.Sprites = {}	
+	
+	return newSpritesheet
+end
+
+function Spritesheet:AddSprite(index, position, size)
+	local Sprite = {Position=position,Size=size}
+	self.Sprites[index] = Sprite
+end
+
+function Spritesheet:GetSprite(instanceType, index)
+	if not index then
+		warn("Image name cannot be nil")
+		return false
+	end
+	local sprite = self.Sprites[index]
+	if not sprite then 
+		warn("Could not find sprite for: " .. index) 
+		return false
+	end
+	local element = Instance.new(instanceType)
+	element.BackgroundTransparency = 1
+	element.BorderSizePixel = 1
+	element.Image = self.Texture
+	element.Size = UDim2.new(0, sprite.Size.X, 0, sprite.Size.Y)
+	element.ImageRectOffset = sprite.Position
+	element.ImageRectSize = sprite.Size
+	
+	return element
+end
+
+return Spritesheet
+]]></ProtectedString>
+							<BinaryString name="Tags"></BinaryString>
+						</Properties>
+					</Item>
+					<Item class="Folder" referent="RBX944A98A9D25F48DDAA0AF96C6103B9A3">
+						<Properties>
+							<string name="Name">Spritesheets</string>
+							<BinaryString name="Tags"></BinaryString>
+						</Properties>
+						<Item class="Folder" referent="RBXF13BDA70BB7B4EC8A9728F9A40B06C28">
+							<Properties>
+								<string name="Name">XboxOne</string>
+								<BinaryString name="Tags"></BinaryString>
+							</Properties>
+							<Item class="ModuleScript" referent="RBX12BC9110C9F246AAA1F1221B53B9FFCC">
+								<Properties>
+									<Content name="LinkedSource"><null></null></Content>
+									<string name="Name">Dark</string>
+									<string name="ScriptGuid">{4523B020-9D6B-43CF-A0A9-745DAE35BC3A}</string>
+									<ProtectedString name="Source"><![CDATA[local Spritesheet = require(script.Parent.Parent.Parent.Spritesheet)
+local Dark = {}
+Dark.__index = Dark
+setmetatable(Dark, Spritesheet)
+
+local darkTexture = "rbxassetid://408444495"
+
+function Dark.new()
+	local newDark = Spritesheet.new(darkTexture)
+	setmetatable(newDark, Dark)
+	
+	newDark:AddSprite("ButtonX", Vector2.new(510, 416), Vector2.new(95, 95))	
+	newDark:AddSprite("ButtonY", Vector2.new(616, 318), Vector2.new(95, 95))
+	newDark:AddSprite("ButtonA", Vector2.new(318, 416), Vector2.new(95, 95))
+	newDark:AddSprite("ButtonB", Vector2.new(520, 522), Vector2.new(95, 95))
+	newDark:AddSprite("ButtonR1", Vector2.new(0, 628), Vector2.new(115, 64))
+	newDark:AddSprite("ButtonL1", Vector2.new(116, 628), Vector2.new(115, 64))
+	newDark:AddSprite("ButtonR2", Vector2.new(616, 414), Vector2.new(105, 115))
+	newDark:AddSprite("ButtonL2", Vector2.new(616, 0), Vector2.new(105, 115))
+	newDark:AddSprite("ButtonR3", Vector2.new(0, 416), Vector2.new(105, 105))
+	newDark:AddSprite("ButtonL3", Vector2.new(0, 522), Vector2.new(105, 105))
+	newDark:AddSprite("ButtonSelect", Vector2.new(424, 522), Vector2.new(95, 95))
+	newDark:AddSprite("DPadLeft", Vector2.new(318, 522), Vector2.new(105, 105))
+	newDark:AddSprite("DPadRight", Vector2.new(212, 416), Vector2.new(105, 105))
+	newDark:AddSprite("DPadUp", Vector2.new(616, 530), Vector2.new(105, 105))
+	newDark:AddSprite("DPadDown", Vector2.new(212, 522), Vector2.new(105, 105))
+	newDark:AddSprite("Thumbstick1", Vector2.new(616, 116), Vector2.new(105, 105))	
+	newDark:AddSprite("Thumbstick2", Vector2.new(106, 522), Vector2.new(105, 105))
+	newDark:AddSprite("DPad", Vector2.new(106, 416), Vector2.new(105, 105))
+	newDark:AddSprite("Controller", Vector2.new(0, 0), Vector2.new(615, 415))
+	newDark:AddSprite("RotateThumbstick1", Vector2.new(414, 416), Vector2.new(95, 95))
+	newDark:AddSprite("RotateThumbstick2", Vector2.new(616, 222), Vector2.new(95, 95))
+	
+	return newDark
+end
+
+return Dark
+]]></ProtectedString>
+									<BinaryString name="Tags"></BinaryString>
+								</Properties>
+							</Item>
+							<Item class="ModuleScript" referent="RBX7ECD1F62DDA74B859DDDC1BC951537D7">
+								<Properties>
+									<Content name="LinkedSource"><null></null></Content>
+									<string name="Name">Light</string>
+									<string name="ScriptGuid">{6646F5C1-4194-4A4F-8F19-A3C02C926C75}</string>
+									<ProtectedString name="Source"><![CDATA[local Spritesheet = require(script.Parent.Parent.Parent.Spritesheet)
+local Light = {}
+Light.__index = Light
+setmetatable(Light, Spritesheet)
+
+local lightTexture = "rbxassetid://408462759"
+
+function Light.new()
+	local newLight = Spritesheet.new(lightTexture)
+	setmetatable(newLight, Light)
+	
+	newLight:AddSprite("ButtonX", Vector2.new(318, 481), Vector2.new(95, 95))	
+	newLight:AddSprite("ButtonY", Vector2.new(500, 587), Vector2.new(95, 95))
+	newLight:AddSprite("ButtonA", Vector2.new(308, 587), Vector2.new(95, 95))
+	newLight:AddSprite("ButtonB", Vector2.new(510, 481), Vector2.new(95, 95))
+	newLight:AddSprite("ButtonR1", Vector2.new(0, 416), Vector2.new(115, 64))
+	newLight:AddSprite("ButtonL1", Vector2.new(116, 416), Vector2.new(115, 64))
+	newLight:AddSprite("ButtonR2", Vector2.new(616, 0), Vector2.new(105, 115))
+	newLight:AddSprite("ButtonL2", Vector2.new(616, 328), Vector2.new(105, 115))
+	newLight:AddSprite("ButtonR3", Vector2.new(616, 550), Vector2.new(105, 105))
+	newLight:AddSprite("ButtonL3", Vector2.new(616, 116), Vector2.new(105, 105))
+	newLight:AddSprite("ButtonSelect", Vector2.new(404, 587), Vector2.new(95, 95))
+	newLight:AddSprite("DPadLeft", Vector2.new(616, 444), Vector2.new(105, 105))
+	newLight:AddSprite("DPadRight", Vector2.new(0, 587), Vector2.new(105, 105))
+	newLight:AddSprite("DPadUp", Vector2.new(616, 222), Vector2.new(105, 105))
+	newLight:AddSprite("DPadDown", Vector2.new(212, 481), Vector2.new(105, 105))
+	newLight:AddSprite("Thumbstick1", Vector2.new(0, 481), Vector2.new(105, 105))	
+	newLight:AddSprite("Thumbstick2", Vector2.new(106, 587), Vector2.new(105, 105))
+	newLight:AddSprite("DPad", Vector2.new(106, 481), Vector2.new(105, 105))
+	newLight:AddSprite("Controller", Vector2.new(0, 0), Vector2.new(615, 415))
+	newLight:AddSprite("RotateThumbstick1", Vector2.new(414, 481), Vector2.new(95, 95))
+	newLight:AddSprite("RotateThumbstick2", Vector2.new(212, 587), Vector2.new(95, 95))
+	
+	return newLight
+end
+
+return Light
+]]></ProtectedString>
+									<BinaryString name="Tags"></BinaryString>
+								</Properties>
+							</Item>
+						</Item>
+					</Item>
+				</Item>
+			</Item>
+		</Item>
+	</Item>
+</roblox>

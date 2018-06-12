@@ -1,0 +1,960 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="ModuleScript" referent="RBX20646B181D9B4C9791E1A2EA61B1D3B8">
+		<Properties>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">FunCommands</string>
+			<string name="ScriptGuid">{A26A2AEE-F64A-4470-A726-186FD0094902}</string>
+			<ProtectedString name="Source"><![CDATA[--[[
+	 __        __  _______  __    __  __   __  ________
+    /  \      / / / _____/  \ \  / /  \ \  \ \ \  _____\
+   / /\ \    / / / /____     \ \/ /    \ \  \ \ \ \_____
+  / /  \ \  / / / _____/     / /\ \     \ \  \ \ \_____ \
+ / /    \ \/ / / /____      / /  \ \     \ \__\ \  ____\ \
+/_/      \__/ /______/     /_/    \_\     \______\ \______\
+
+Nexus Admin, by TheNexusAvenger
+
+
+
+Date: June 7 2018
+--]]
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------              Configuration             --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+CommandOverrideLevels = {
+	removehats = nil,
+	play = nil,
+	pitch = nil,
+	volume = nil,
+	pause = nil,
+	resume = nil,
+	stop = nil,
+	blind = nil,
+	unblind = nil,
+	char = nil,
+	unchar = nil,
+	hat = nil,
+	disco = nil,
+	spin = nil,
+	unspin = nil,
+	freeze = nil,
+	thaw = nil,
+	invisible = nil,
+	visible = nil,
+	light = nil,
+	unlight = nil,
+	fire = nil,
+	unfire = nil,
+	smoke = nil,
+	unsmoke = nil,
+	sparkles = nil,
+	unsparkles = nil,
+	face = nil,
+	rocket = nil,
+	unrocket = nil,
+	vibrate = nil,
+	unvibrate = nil,
+}
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------             Optimizations              --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local gsub,sub,match,len,lower = string.gsub,string.sub,string.match,string.len,string.lower
+local huge,random,pi = math.huge,math.random,math.pi
+local insert = table.insert
+local CFramenew,CFrameAngles = CFrame.new,CFrame.Angles
+local Vector3new = Vector3.new
+local Instancenew = Instance.new
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------         Environment Variables          --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+local API = _G.NexusAdmin_GetServerAPI()
+local AdminItemContainer = API.AdminItemContainer
+local Config = API.GetConfig()
+
+local CommandPrefix = Config.CommandPrefix or ":"
+local BuildUtilityLevel = Config.BuildUtilityLevel or 1
+local BasicCommandsLevel = Config.BasicCommandsLevel or 1
+local UsefulFunCommandsLevel = Config.UsefulFunCommandsLevel or 2
+local FunCommandsLevel = Config.FunCommandsLevel or 3
+local CommandLevelOverrides = Config.CommandLevelOverrides or {}
+
+local function GetNeededAdminLevel(BaseValue,CommandValue)
+	local Level = (CommandLevelOverrides["FunCommands"] or {})[CommandValue]
+	return CommandOverrideLevels[CommandValue] or Level or BaseValue
+end
+
+
+
+
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------              Fun Commands              --------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "removehats",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"removehats"),
+	ExtraInfo = "Removes the hats of a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				for _,Ins in pairs(Char:GetChildren()) do
+					if Ins:IsA("Hat") or Ins:IsA("Accoutrement") or Ins:IsA("Accessory") then
+						Ins:Destroy()
+					end
+				end
+			end
+		end
+	end,
+})
+
+local Audio = Instancenew("Sound")
+Audio.Name = "NexusAdmin_Audio"
+Audio.Looped = true
+Audio.Parent = game.Workspace
+
+local MarketplaceService = game:GetService("MarketplaceService")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "play",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"play"),
+	ExtraInfo = "Plays music with the given id.",
+	ArgumentsHelp = "AudioId",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Id = ArgumentParser:GetNextNumber()
+		
+		if not Id then API.DisplayHint(Player,"No Id given.") return end
+		local Worked,ProductData = pcall(function() return MarketplaceService:GetProductInfo(Id) end)
+		if not Worked or not ProductData then API.DisplayHint(Player,"Error loading audio "..Id..".") return end
+		if ProductData.AssetTypeId ~= 3 then API.DisplayHint(Player,tostring(ProductData.Name.."("..Id..") is not an audio.")) return end
+		for _,Player in pairs(game.Players:GetPlayers()) do
+			API.DisplayHint(Player,tostring("Now playing \""..tostring(ProductData.Name).."\" ("..Id..")."))
+		end
+		Audio:Stop()
+		Audio.SoundId = "rbxassetid://"..Id
+		Audio:Play()
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "pitch",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"pitch"),
+	ExtraInfo = "Changes the pitch of the audio.",
+	ArgumentsHelp = "Pitch",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Pitch = ArgumentParser:GetNextNumber()
+		
+		if not Pitch then API.DisplayHint(Player,"No Pitch given.") return end
+		Audio.Pitch = Pitch
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "volume",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"volume"),
+	ExtraInfo = "Changes the volume of the audio.",
+	ArgumentsHelp = "Volume",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Volume = ArgumentParser:GetNextNumber()
+		
+		if not Volume then API.DisplayHint(Player,"No Volume given.") return end
+		Audio.Volume = Volume
+	end,
+})
+
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "pause",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"pause"),
+	ExtraInfo = "Pauses an audio that is playing.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		Audio:Pause()
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "resume",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"resume"),
+	ExtraInfo = "Resumes an audio that is paused.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		Audio:Resume()
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "stop",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"stop"),
+	ExtraInfo = "Stops an audio that is playing.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		Audio:Stop()
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "blind",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"blind"),
+	ExtraInfo = "Blinds a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			local PlayerGui = Player:FindFirstChild("PlayerGui")
+			if PlayerGui then
+				if not PlayerGui:FindFirstChild("NexusAdmin_Blind") then
+					local NexusAdmin_Blind = Instancenew("ScreenGui")
+					NexusAdmin_Blind.Name = "NexusAdmin_Blind"
+					
+					local Frame = Instancenew("Frame")
+					Frame.Size = UDim2.new(1,0,1,0)
+					Frame.BackgroundColor3 = Color3.new(1,1,1)
+					Frame.BorderSizePixel = 0
+					Frame.Parent = NexusAdmin_Blind
+					
+					NexusAdmin_Blind.Parent = PlayerGui
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unblind",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unblind"),
+	ExtraInfo = "Unblinds a set of players.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			local PlayerGui = Player:FindFirstChild("PlayerGui")
+			if PlayerGui then
+				if PlayerGui:FindFirstChild("NexusAdmin_Blind") then
+					PlayerGui:FindFirstChild("NexusAdmin_Blind"):Destroy()
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "char",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"char"),
+	ExtraInfo = "Changes the character appearance, but does have to respawn the character.",
+	ArgumentsHelp = "Players AppearanceId",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Id = ArgumentParser:GetNextNumber()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		if not Id then API.DisplayHint(Player,"No AppearanceId given.") return end
+		for _,Player in pairs(Players) do
+			spawn(function()
+				local HumanoidRootPart = Player.Character:FindFirstChild("HumanoidRootPart")
+				if not HumanoidRootPart then return end
+				local CF = HumanoidRootPart.CFrame
+				Player.CharacterAppearance = "http://assetgame.roblox.com/Asset/CharacterFetch.ashx?userId="..Id
+				Player:LoadCharacter()
+				local Character = Player.Character
+				while not Character do wait() Character = Player.Character end
+				Character:WaitForChild("HumanoidRootPart").CFrame = CF
+			end)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unchar",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unchar"),
+	ExtraInfo = "Resets the character appearance, but does have to respawn the character.",
+	ArgumentsHelp = "Players",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given.") return end
+		for _,Player in pairs(Players) do
+			spawn(function()
+				local HumanoidRootPart = Player.Character:FindFirstChild("HumanoidRootPart")
+				if not HumanoidRootPart then return end
+				local CF = HumanoidRootPart.CFrame
+				Player.CharacterAppearance = "http://assetgame.roblox.com/Asset/CharacterFetch.ashx?userId="..Player.UserId
+				Player:LoadCharacter()
+				local Character = Player.Character
+				while not Character do wait() Character = Player.Character end
+				Character:WaitForChild("HumanoidRootPart").CFrame = CF
+			end)
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "hat",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"hat"),
+	ArgumentsHelp = "Players Ids",
+	ExtraInfo = "Gives the hats with the given ids to each player.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Ids = ArgumentParser:GetNextNumbers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		if #Ids == 0 then API.DisplayHint(Player,"No Id(s) given") return end
+		local Hats = {}
+		for _,Id in pairs(Ids) do
+			local Model = game:GetService("InsertService"):LoadAsset(Id)
+			for _,Hat in pairs(Model:GetChildren()) do
+				if Hat:IsA("Hat") or Hat:IsA("Accoutrement") or Hat:IsA("Accessory") then
+					insert(Hats,Hat)
+				end
+			end
+		end
+		for _,Player in pairs(Players) do
+			for _,Hat in pairs(Hats) do
+				Hat:Clone().Parent = Player.Character
+			end
+		end
+	end,
+})
+
+local DiscoOn = false
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "disco",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"disco"),
+	ExtraInfo = "Toggles disco on and off.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		DiscoOn = not DiscoOn
+		if DiscoOn == true then
+			while DiscoOn == true do
+				local Color = Color3.new(random(),random(),random())
+				game.Lighting.Ambient = Color
+				game.Lighting.OutdoorAmbient = Color
+				wait(0.25)
+			end
+		else
+			game.Lighting.Ambient = _G.NexusAdmin_LightingProperties.Ambient
+			game.Lighting.OutdoorAmbient = _G.NexusAdmin_LightingProperties.OutdoorAmbient
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "spin",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"spin"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Spins a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if not Players then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if not HumanoidRootPart:FindFirstChild("NexusAdmin_SpinEffect") then
+						local BodyAngularVelocity = Instancenew("BodyAngularVelocity")
+						BodyAngularVelocity.Name = "NexusAdmin_SpinEffect"
+						BodyAngularVelocity.MaxTorque = Vector3new(0,huge,0)
+						BodyAngularVelocity.AngularVelocity = Vector3new(0,8,0)
+						BodyAngularVelocity.Parent = HumanoidRootPart
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unspin",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unspin"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Unspins a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if HumanoidRootPart:FindFirstChild("NexusAdmin_SpinEffect") then
+						HumanoidRootPart:FindFirstChild("NexusAdmin_SpinEffect"):Destroy()
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "invisible",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"invisible"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Makes a set of players invisible.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local function DoIns(Ins)
+					if (Ins:IsA("BasePart") or Ins:IsA("Decal")) and Ins.Transparency < 1 then
+						Ins.Transparency = Ins.Transparency + 1.1
+					end
+					for _,NIns in pairs(Ins:GetChildren()) do
+						DoIns(NIns)
+					end
+				end
+				DoIns(Char)
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "visible",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"visible"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Makes a set of players visible.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local function DoIns(Ins)
+					if (Ins:IsA("BasePart") or Ins:IsA("Decal")) and Ins.Transparency > 1 then
+						Ins.Transparency = Ins.Transparency - 1.1
+					end
+					for _,NIns in pairs(Ins:GetChildren()) do
+						DoIns(NIns)
+					end
+				end
+				DoIns(Char)
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "light",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"light"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Adds a light to a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					local Light = Instancenew("PointLight")
+					Light.Name = "NexusAdmin_Light"
+					Light.Parent = HumanoidRootPart
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unlight",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unlight"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Removes all light from a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					for _,Light in pairs(HumanoidRootPart:GetChildren()) do
+						if Light.Name == "NexusAdmin_Light" then
+							Light:Destroy()
+						end
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "fire",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"fire"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Adds fire to a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					local Fire = Instancenew("Fire")
+					Fire.Name = "NexusAdmin_Fire"
+					Fire.Parent = HumanoidRootPart
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unfire",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unfire"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Removes all fire from a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					for _,Fire in pairs(HumanoidRootPart:GetChildren()) do
+						if Fire.Name == "NexusAdmin_Fire" then
+							Fire:Destroy()
+						end
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "smoke",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"smoke"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Adds smoke to a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					local Smoke = Instancenew("Smoke")
+					Smoke.Color = Color3.new(100/255,100/255,100/255)
+					Smoke.RiseVelocity = 5
+					Smoke.Opacity = 0.75
+					Smoke.Name = "NexusAdmin_Smoke"
+					Smoke.Parent = HumanoidRootPart
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unsmoke",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unsmoke"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Removes all smoke from a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					for _,Smoke in pairs(HumanoidRootPart:GetChildren()) do
+						if Smoke.Name == "NexusAdmin_Smoke" then
+							Smoke:Destroy()
+						end
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "sparkles",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"sparkles"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Adds sparkles to a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					local Sparkles = Instancenew("Sparkles")
+					Sparkles.Name = "NexusAdmin_Sparkles"
+					Sparkles.Parent = HumanoidRootPart
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unsparkles",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unsparkles"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Removes all sparkles from a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					for _,Sparkles in pairs(HumanoidRootPart:GetChildren()) do
+						if Sparkles.Name == "NexusAdmin_Sparkles" then
+							Sparkles:Destroy()
+						end
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "face",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"face"),
+	ArgumentsHelp = "Players Id",
+	ExtraInfo = "Gives the face with the given id to each player.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Id = ArgumentParser:GetNextNumber()
+		
+		if not Players then API.DisplayHint(Player,"No Players given") return end
+		if not Id then API.DisplayHint(Player,"No Id given") return end
+		local Face
+		local Model = game:GetService("InsertService"):LoadAsset(Id)
+		for _,FaceItem in pairs(Model:GetChildren()) do
+			if FaceItem:IsA("Decal") then
+				Face = FaceItem
+			end
+		end
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local Head = Char:FindFirstChild("Head")
+				if Head then
+					local Trans = 0
+					if Head:FindFirstChild("face") then
+						Trans = Head:FindFirstChild("face").Transparency
+						Head:FindFirstChild("face"):Destroy()
+					end
+					if Head:FindFirstChild("Face") then
+						Trans = Head:FindFirstChild("Face").Transparency
+						Head:FindFirstChild("Face"):Destroy()
+					end
+					local NewFace = Face:Clone()
+					NewFace.Transparency = Trans
+					NewFace.Parent = Head
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "rocket",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"rocket"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Adds a rocket to a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if not HumanoidRootPart:FindFirstChild("NexusAdmin_Rocket") then
+						local NexusAdmin_Rocket = Instancenew("Part")
+						NexusAdmin_Rocket.Name = "NexusAdmin_Rocket"
+						NexusAdmin_Rocket.Material = "SmoothPlastic"
+						NexusAdmin_Rocket.CanCollide = false
+						NexusAdmin_Rocket.FormFactor = "Custom"
+						NexusAdmin_Rocket.Size = Vector3new(1,2,2)
+						NexusAdmin_Rocket.Parent = HumanoidRootPart
+						
+						local Mesh = Instancenew("SpecialMesh")
+						Mesh.MeshType = "FileMesh"
+						Mesh.MeshId = "http://www.roblox.com/asset/?id=2251534"
+						Mesh.Scale = Vector3new(0.5,0.5,0.5)
+						Mesh.Parent = NexusAdmin_Rocket
+						
+						local Weld = Instancenew("Weld")
+						Weld.Part0 = HumanoidRootPart
+						Weld.Part1 = NexusAdmin_Rocket
+						Weld.C1 = CFramenew(0,-0.8,0.4) * CFrameAngles(-pi/2,0,0)
+						Weld.Parent = NexusAdmin_Rocket
+						
+						local Fire = Instancenew("Fire")
+						Fire.Heat = 0
+						Fire.Parent = NexusAdmin_Rocket
+						
+						local BodyVelocity = Instancenew("BodyVelocity")
+						BodyVelocity.MaxForce = Vector3new(0,huge,0)
+						BodyVelocity.Velocity = Vector3new(0,75,0)
+						BodyVelocity.Parent = NexusAdmin_Rocket
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unrocket",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unrocket"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Removes a rocket from a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if not Players then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if HumanoidRootPart:FindFirstChild("NexusAdmin_Rocket") then
+						HumanoidRootPart:FindFirstChild("NexusAdmin_Rocket"):Destroy()
+					end
+				end
+			end
+		end
+	end,
+})
+
+local VibrateScript = script:WaitForChild("NexusAdmin_VibrateScript")
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "vibrate",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"vibrate"),
+	ArgumentsHelp = "Players Intensity",
+	ExtraInfo = "Vibrates a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		local Intensity = ArgumentParser:GetNextNumber()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		if not Intensity then API.DisplayHint(Player,"No Intensity given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if HumanoidRootPart:FindFirstChild("NexusAdmin_VibrateScript") then
+						HumanoidRootPart:FindFirstChild("NexusAdmin_VibrateScript"):Destroy()
+					end
+					if Intensity ~= 0 then
+						local NewVibrateScript = VibrateScript:Clone()
+						NewVibrateScript:WaitForChild("Intensity").Value = Intensity
+						NewVibrateScript.Parent = HumanoidRootPart
+						NewVibrateScript.Disabled = false
+					end
+				end
+			end
+		end
+	end,
+})
+
+API.AddCommandToLoad({
+	Prefix = CommandPrefix,
+	Keyword = "unvibrate",
+	AdminLevel = GetNeededAdminLevel(FunCommandsLevel,"unvibrate"),
+	ArgumentsHelp = "Players",
+	ExtraInfo = "Unvibrates a set of players.",
+	CommandGroup = "Fun Commands",
+	OnCommandInvoked = function(Player,BaseMessage,ArgumentParser)
+		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
+		local Players = ArgumentParser:GetNextPlayers()
+		if #Players == 0 then API.DisplayHint(Player,"No Players given") return end
+		
+		for _,Player in pairs(Players) do
+			local Char = Player.Character
+			if Char then
+				local HumanoidRootPart = Char:FindFirstChild("HumanoidRootPart")
+				if HumanoidRootPart then
+					if HumanoidRootPart:FindFirstChild("NexusAdmin_VibrateScript") then
+						HumanoidRootPart:FindFirstChild("NexusAdmin_VibrateScript"):Destroy()
+					end
+				end
+			end
+		end
+	end,
+})
+
+
+
+return true]]></ProtectedString>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+		<Item class="Script" referent="RBX4DA6B2114A6C489C834A64047B62A3E0">
+			<Properties>
+				<bool name="Disabled">true</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<string name="Name">NexusAdmin_VibrateScript</string>
+				<string name="ScriptGuid">{1571791A-A63A-4EB2-86F0-15300E1C2E78}</string>
+				<ProtectedString name="Source"><![CDATA[local Intensity = script:WaitForChild("Intensity")
+local Torso = script.Parent
+local random,CFramenew = math.random,CFrame.new
+
+local function Random()
+	return random(-100,100)/100
+end
+
+while script.Parent do
+	local Intensity = Intensity.Value
+	Torso.CFrame = Torso.CFrame * CFramenew(Random() * Intensity,0,Random() * Intensity)
+	wait()
+end]]></ProtectedString>
+				<BinaryString name="Tags"></BinaryString>
+			</Properties>
+			<Item class="NumberValue" referent="RBX69A3D9A80ABB417BB30CC138732F4A43">
+				<Properties>
+					<string name="Name">Intensity</string>
+					<BinaryString name="Tags"></BinaryString>
+					<double name="Value">0</double>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+</roblox>
