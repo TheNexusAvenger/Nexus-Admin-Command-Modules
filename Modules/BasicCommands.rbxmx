@@ -1,7 +1,7 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
 	<External>null</External>
 	<External>nil</External>
-	<Item class="ModuleScript" referent="RBXF84457B8F5AC4727B16224086794F2EE">
+	<Item class="ModuleScript" referent="RBXDAEA1F96E14747CB83CDE63BD78921F5">
 		<Properties>
 			<Content name="LinkedSource"><null></null></Content>
 			<string name="Name">BasicCommands</string>
@@ -931,7 +931,7 @@ API.AddCommandToLoad({
 		API.AddToLogs(Player.Name.." ["..API.GetTimeString().."]: "..BaseMessage)
 		local Players = ArgumentParser:GetNextPlayers()
 		local StatName = ArgumentParser:GetNextString()
-		local NewValue = ArgumentParser:GetNexNumber()
+		local NewValue = ArgumentParser:GetNextNumber()
 		if NewValue == nil then
 			ArgumentParser:OffsetPointer(-1)
 			NewValue = ArgumentParser:GetNextString(true)
@@ -998,7 +998,7 @@ API.AddCommandToLoad({
 return true]]></ProtectedString>
 			<BinaryString name="Tags"></BinaryString>
 		</Properties>
-		<Item class="LocalScript" referent="RBX68F74F22983745F584DF650383398609">
+		<Item class="LocalScript" referent="RBXA7A3DB89DC5E4470AF9533BF0EAC35E0">
 			<Properties>
 				<bool name="Disabled">true</bool>
 				<Content name="LinkedSource"><null></null></Content>
@@ -1097,14 +1097,14 @@ while Line.Parent do
 end]]]]></ProtectedString>
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
-			<Item class="RemoteEvent" referent="RBX85B4446270114E9ABE2A8B8F04FB629E">
+			<Item class="RemoteEvent" referent="RBXF78C84FAB85B47D5A6CB499F21B2E348">
 				<Properties>
 					<string name="Name">SafeRemove</string>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="LocalScript" referent="RBXF33398CBADD047348E2E8655A6A0FEC5">
+		<Item class="LocalScript" referent="RBXAE24C1D5CF1641A0909494BF83D7584B">
 			<Properties>
 				<bool name="Disabled">true</bool>
 				<Content name="LinkedSource"><null></null></Content>
@@ -1655,14 +1655,14 @@ wait()
 script:Destroy()]]></ProtectedString>
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
-			<Item class="StringValue" referent="RBX400A7C5E47104F24BB42EFB64E8D143B">
+			<Item class="StringValue" referent="RBX62E29F4A9377417A8C3D368BD928AEAE">
 				<Properties>
 					<string name="Name">FunctionToDo</string>
 					<BinaryString name="Tags"></BinaryString>
 					<string name="Value"></string>
 				</Properties>
 			</Item>
-			<Item class="ModuleScript" referent="RBX461F526E0A6B46139EBAD060D9030589">
+			<Item class="ModuleScript" referent="RBX2F733827E1444A1A8363406BEBF954E2">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<string name="Name">ButtonClass</string>
@@ -2198,7 +2198,7 @@ return ButtonClass
 ]]></ProtectedString>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="ModuleScript" referent="RBX1302C6881A5146B0B5C617D968229961">
+				<Item class="ModuleScript" referent="RBXC4F12D9A618E46A9BFA702BAE1DB660C">
 					<Properties>
 						<Content name="LinkedSource"><null></null></Content>
 						<string name="Name">GamePadIcons</string>
@@ -2239,7 +2239,7 @@ return ControllerImageLibrary
 ]]></ProtectedString>
 						<BinaryString name="Tags"></BinaryString>
 					</Properties>
-					<Item class="ModuleScript" referent="RBXC23A8B2995FD40328517F01ACF3144C1">
+					<Item class="ModuleScript" referent="RBXBD94F5DE9C924E499E8D53850C95B1E7">
 						<Properties>
 							<Content name="LinkedSource"><null></null></Content>
 							<string name="Name">Spritesheet</string>
@@ -2288,17 +2288,17 @@ return Spritesheet
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
 					</Item>
-					<Item class="Folder" referent="RBX321D284C97FB4476A833434ED7D85D59">
+					<Item class="Folder" referent="RBX77EC8078B5DB4B568FF47E5D6A3A5DF6">
 						<Properties>
 							<string name="Name">Spritesheets</string>
 							<BinaryString name="Tags"></BinaryString>
 						</Properties>
-						<Item class="Folder" referent="RBXB29D2A13FCB14CF7A32EB0B58B2F2C84">
+						<Item class="Folder" referent="RBX608D6B7D50154BF49433307BE54B035E">
 							<Properties>
 								<string name="Name">XboxOne</string>
 								<BinaryString name="Tags"></BinaryString>
 							</Properties>
-							<Item class="ModuleScript" referent="RBX4D589162B6554194A45870108D4D016A">
+							<Item class="ModuleScript" referent="RBX6B1395A2E6244E3E85C639F1E839B9F8">
 								<Properties>
 									<Content name="LinkedSource"><null></null></Content>
 									<string name="Name">Dark</string>
@@ -2344,7 +2344,7 @@ return Dark
 									<BinaryString name="Tags"></BinaryString>
 								</Properties>
 							</Item>
-							<Item class="ModuleScript" referent="RBXD9A522A07087433FAEB873DFE33871DC">
+							<Item class="ModuleScript" referent="RBXB24C7E9238DC471E99F737069E16DA65">
 								<Properties>
 									<Content name="LinkedSource"><null></null></Content>
 									<string name="Name">Light</string>
@@ -2395,7 +2395,7 @@ return Light
 				</Item>
 			</Item>
 		</Item>
-		<Item class="Tool" referent="RBXDA54D104CB544C5BB4CB5AFD6138E4DE">
+		<Item class="Tool" referent="RBX12FD092EE27347C2A9F439F5AF6774EB">
 			<Properties>
 				<bool name="CanBeDropped">true</bool>
 				<bool name="Enabled">true</bool>
@@ -2420,7 +2420,7 @@ return Light
 				<Content name="TextureId"><url>rbxasset://Textures/Sword128.png</url></Content>
 				<string name="ToolTip"></string>
 			</Properties>
-			<Item class="Script" referent="RBXCD67B144AE424757B835A130CEFADA82">
+			<Item class="Script" referent="RBX21B64FC65BC0484684672422B4F588C5">
 				<Properties>
 					<bool name="Disabled">false</bool>
 					<Content name="LinkedSource"><null></null></Content>
@@ -2459,7 +2459,7 @@ end)]]></ProtectedString>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="Part" referent="RBX2CEFD729F1794E888AD366801CD58AA9">
+			<Item class="Part" referent="RBX21CD74F5E2FB45E5A021D19C0C29F35D">
 				<Properties>
 					<bool name="Anchored">false</bool>
 					<float name="BackParamA">-0.5</float>
@@ -2532,7 +2532,7 @@ end)]]></ProtectedString>
 						<Z>4</Z>
 					</Vector3>
 				</Properties>
-				<Item class="SpecialMesh" referent="RBX2A03DFDE9AB542E38AB131D22A57301F">
+				<Item class="SpecialMesh" referent="RBX5DD3F7D695F841CAA10907967330D9A2">
 					<Properties>
 						<token name="LODX">2</token>
 						<token name="LODY">2</token>
@@ -2558,7 +2558,7 @@ end)]]></ProtectedString>
 						</Vector3>
 					</Properties>
 				</Item>
-				<Item class="Sound" referent="RBX5FF6204400F04F73A3177D353C78CB06">
+				<Item class="Sound" referent="RBXD3B56C1EA7C9446CA3D874E376A7A65D">
 					<Properties>
 						<float name="EmitterSize">10</float>
 						<bool name="Looped">false</bool>
@@ -2575,7 +2575,7 @@ end)]]></ProtectedString>
 						<float name="xmlRead_MaxDistance_3">10000</float>
 					</Properties>
 				</Item>
-				<Item class="Sound" referent="RBX8B819FB9D7D445B6853AFCF5BEDD38E8">
+				<Item class="Sound" referent="RBX8C06FA79909D4A6DA4944B02F8BCFE3A">
 					<Properties>
 						<float name="EmitterSize">10</float>
 						<bool name="Looped">false</bool>
@@ -2592,7 +2592,7 @@ end)]]></ProtectedString>
 						<float name="xmlRead_MaxDistance_3">10000</float>
 					</Properties>
 				</Item>
-				<Item class="Sound" referent="RBX7C19D5B7D01D42BF9C1660F14A3FCFCB">
+				<Item class="Sound" referent="RBX66FAE952D5B54FBD85888D46E7CC142E">
 					<Properties>
 						<float name="EmitterSize">10</float>
 						<bool name="Looped">false</bool>
@@ -2610,7 +2610,7 @@ end)]]></ProtectedString>
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="LocalScript" referent="RBXA3A14199CEEF40C3A4C8C9A27CBA598F">
+			<Item class="LocalScript" referent="RBX6784FBA2C3E54D0E881BFE608383CC40">
 				<Properties>
 					<bool name="Disabled">false</bool>
 					<Content name="LinkedSource"><null></null></Content>
@@ -2652,40 +2652,40 @@ end)]]></ProtectedString>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="Configuration" referent="RBX9466BCDB82FA4DD794BFFE228484F715">
+			<Item class="Configuration" referent="RBX08E99C59A6384FBAA07AA800477DFA89">
 				<Properties>
 					<string name="Name">Configurations</string>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
-				<Item class="BoolValue" referent="RBX93124FF983674FF7905538D257E32F45">
+				<Item class="BoolValue" referent="RBX50A74F453A74432CAA75EF480163D18D">
 					<Properties>
 						<string name="Name">CanTeamkill</string>
 						<BinaryString name="Tags"></BinaryString>
 						<bool name="Value">false</bool>
 					</Properties>
 				</Item>
-				<Item class="IntValue" referent="RBXAEFCB2583C744CFD8EBCE3FA71A0B997">
+				<Item class="IntValue" referent="RBXAD2D046DDEC34251B335424DC6EA9CD7">
 					<Properties>
 						<string name="Name">IdleDamage</string>
 						<BinaryString name="Tags"></BinaryString>
 						<int name="Value">5</int>
 					</Properties>
 				</Item>
-				<Item class="IntValue" referent="RBXAE47889C2B564FE8AF9018BD13A71EEC">
+				<Item class="IntValue" referent="RBXF980F486B0F8446E854BCCA2C79EC360">
 					<Properties>
 						<string name="Name">SlashDamage</string>
 						<BinaryString name="Tags"></BinaryString>
 						<int name="Value">10</int>
 					</Properties>
 				</Item>
-				<Item class="IntValue" referent="RBX6C0575C118A446319FF67AD84857DDC7">
+				<Item class="IntValue" referent="RBX4D7D1997E1564162A43A61D420C1472A">
 					<Properties>
 						<string name="Name">LungeDamage</string>
 						<BinaryString name="Tags"></BinaryString>
 						<int name="Value">30</int>
 					</Properties>
 				</Item>
-				<Item class="BoolValue" referent="RBX182F538ED2E5440C98BD4E54FF1BAC1D">
+				<Item class="BoolValue" referent="RBXA2858E986C9A4B2583012CB6F223D1E5">
 					<Properties>
 						<string name="Name">CanKillWithForceField</string>
 						<BinaryString name="Tags"></BinaryString>
@@ -2693,7 +2693,7 @@ end)]]></ProtectedString>
 					</Properties>
 				</Item>
 			</Item>
-			<Item class="ModuleScript" referent="RBX79DDF848E5DC4ED4B87BA9860AF48CB9">
+			<Item class="ModuleScript" referent="RBXED87D3E7476C4CEF847C9258C9782C5B">
 				<Properties>
 					<Content name="LinkedSource"><null></null></Content>
 					<string name="Name">Sword</string>
@@ -2878,7 +2878,7 @@ return Sword]]></ProtectedString>
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="RemoteEvent" referent="RBX0D933446605B47029591C18EF2598461">
+			<Item class="RemoteEvent" referent="RBX93BE608CD6C9445894E8DC55EA01CEEB">
 				<Properties>
 					<string name="Name">RemoteClick</string>
 					<BinaryString name="Tags"></BinaryString>
